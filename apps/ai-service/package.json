@@ -1,0 +1,9 @@
+{
+  "name": "ai-service",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "lint": "ruff check .",
+    "typecheck": "mypy ."
+  }
+}
