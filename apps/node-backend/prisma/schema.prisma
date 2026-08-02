@@ -1,0 +1,122 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id                String    @id @default(uuid())
+  email             String    @unique
+  passwordHash      String
+  githubAccessToken String?   // encrypted at rest (AES-256-GCM, see src/lib/crypto in Step 3)
+  githubUsername    String?
+  failedLoginCount  Int       @default(0)
+  lockedUntil       DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  repos         Repo[]
+  chatSessions  ChatSession[]
+  refreshTokens RefreshToken[]
+
+  @@index([email])
+}
+
+model RefreshToken {
+  id         String    @id @default(uuid())
+  userId     String
+  tokenHash  String    // store hash, never the raw token
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+  replacedBy String?   // token rotation chain tracking
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([tokenHash])
+}
+
+model Repo {
+  id            String      @id @default(uuid())
+  userId        String
+  githubRepoId  String      // GitHub's numeric repo id
+  fullName      String      // e.g. "devansh/dil-backend"
+  defaultBranch String
+  languages     Json?       // detected languages breakdown
+  frameworks    Json?       // detected frameworks
+  fileCount     Int?
+  indexStatus   IndexStatus @default(PENDING)
+  lastIndexedAt DateTime?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  indexJobs    IndexJob[]
+  chatSessions ChatSession[]
+
+  @@unique([userId, githubRepoId])
+  @@index([userId])
+}
+
+enum IndexStatus {
+  PENDING
+  CLONING
+  PARSING
+  EMBEDDING
+  COMPLETED
+  FAILED
+}
+
+model IndexJob {
+  id           String      @id @default(uuid())
+  repoId       String
+  status       IndexStatus @default(PENDING)
+  progress     Int         @default(0) // 0-100
+  errorMessage String?
+  startedAt    DateTime?
+  completedAt  DateTime?
+  createdAt    DateTime    @default(now())
+
+  repo Repo @relation(fields: [repoId], references: [id], onDelete: Cascade)
+
+  @@index([repoId])
+}
+
+model ChatSession {
+  id        String   @id @default(uuid())
+  userId    String
+  repoId    String
+  title     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  repo     Repo      @relation(fields: [repoId], references: [id], onDelete: Cascade)
+  messages Message[]
+
+  @@index([userId])
+  @@index([repoId])
+}
+
+model Message {
+  id              String      @id @default(uuid())
+  chatSessionId   String
+  role            MessageRole
+  content         String      @db.Text
+  agentType       String?     // "architecture" | "bug_investigation" | "pr_summary" | "documentation"
+  reviewerVerdict Json?       // stores reviewer approval/rejection metadata
+  createdAt       DateTime    @default(now())
+
+  chatSession ChatSession @relation(fields: [chatSessionId], references: [id], onDelete: Cascade)
+
+  @@index([chatSessionId])
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+  SYSTEM
+}

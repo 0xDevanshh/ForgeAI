@@ -1,7 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 import { env } from "../config/env";
 import { logger } from "../lib/logger";
-import type { ApiErrorResponse } from "../types/http";
+import type { ApiErrorResponse, ValidationFieldError } from "../types/http";
 
 export class AppError extends Error {
   public readonly statusCode: number;
@@ -13,6 +13,19 @@ export class AppError extends Error {
     this.isOperational = isOperational;
     Object.setPrototypeOf(this, AppError.prototype);
     Error.captureStackTrace(this, this.constructor);
+  }
+}
+
+// Thrown by the `validate` middleware. Kept as a distinct subclass rather than
+// widening AppError's constructor, so every existing `new AppError(...)` call
+// site is unaffected.
+export class ValidationError extends AppError {
+  public readonly details: ValidationFieldError[];
+
+  constructor(details: ValidationFieldError[]) {
+    super("VALIDATION_ERROR", 400);
+    this.details = details;
+    Object.setPrototypeOf(this, ValidationError.prototype);
   }
 }
 
@@ -33,6 +46,10 @@ export function errorHandler(err: unknown, req: Request, res: Response, _next: N
   const body: ApiErrorResponse = {
     error: isOperational ? error.message : "Internal Server Error",
   };
+
+  if (err instanceof ValidationError) {
+    body.details = err.details;
+  }
 
   if (env.NODE_ENV === "development") {
     body.stack = error.stack;
