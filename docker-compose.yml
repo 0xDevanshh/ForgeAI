@@ -10,14 +10,29 @@ services:
       - postgres_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-copilot} -d ${POSTGRES_DB:-ai_codebase_copilot}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - app-network
 
   redis:
     image: redis:7-alpine
     restart: unless-stopped
+    command: redis-server --appendonly yes
     volumes:
       - redis_data:/data
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - app-network
 
   qdrant:
     image: qdrant/qdrant:latest
@@ -27,50 +42,67 @@ services:
     ports:
       - "6333:6333"
       - "6334:6334"
+    networks:
+      - app-network
 
   node-backend:
     build:
       context: .
       dockerfile: apps/node-backend/Dockerfile
+      target: builder
     restart: unless-stopped
     env_file:
       - .env
-    environment:
-      NODE_ENV: production
+    volumes:
+      - ./apps/node-backend/src:/app/apps/node-backend/src
     ports:
       - "${NODE_BACKEND_PORT:-4000}:4000"
     depends_on:
-      - postgres
-      - redis
-      - qdrant
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - app-network
 
   ai-service:
     build:
       context: .
       dockerfile: apps/ai-service/Dockerfile
+      target: builder
     restart: unless-stopped
     env_file:
       - .env
+    volumes:
+      - ./apps/ai-service/app:/app/apps/ai-service/app
     ports:
       - "${AI_SERVICE_PORT:-8000}:8000"
     depends_on:
-      - postgres
-      - redis
-      - qdrant
+      postgres:
+        condition: service_healthy
+      qdrant:
+        condition: service_started
+    networks:
+      - app-network
 
   web:
     build:
       context: .
       dockerfile: apps/web/Dockerfile
+      target: builder
     restart: unless-stopped
     env_file:
       - .env
-    environment:
-      NODE_ENV: production
     ports:
       - "${WEB_PORT:-3000}:3000"
     depends_on:
       - node-backend
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
 
 volumes:
   postgres_data:

@@ -4,8 +4,8 @@
   "private": true,
   "description": "Monorepo for the AI Codebase Copilot: Express backend, FastAPI AI service, and Next.js web app.",
   "scripts": {
-    "dev": "docker compose -f docker-compose.dev.yml up --build",
-    "dev:down": "docker compose -f docker-compose.dev.yml down",
+    "dev": "docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build",
+    "dev:down": "docker compose -f docker-compose.yml -f docker-compose.dev.yml down",
     "build": "pnpm -r --if-present build",
     "lint": "pnpm -r --if-present lint",
     "typecheck": "pnpm -r --if-present typecheck"
