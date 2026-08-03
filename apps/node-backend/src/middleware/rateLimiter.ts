@@ -8,6 +8,7 @@ import type { ApiErrorResponse } from "../types/http";
 type RateLimitedRequest = Request & { rateLimit?: RateLimitInfo };
 
 const FIFTEEN_MINUTES_MS = 15 * 60 * 1000;
+const ONE_MINUTE_MS = 60 * 1000;
 
 async function sendCommand(...args: string[]): Promise<RedisReply> {
   const [command, ...rest] = args;
@@ -59,4 +60,25 @@ export const strictAuthLimiter = buildLimiter({
   windowMs: FIFTEEN_MINUTES_MS,
   max: 5,
   prefix: "rl:auth:",
+});
+
+// GitHub redirects the browser here, not a user typing into a form, so the
+// 5/15min strict limiter doesn't apply — but it's still a public endpoint
+// worth capping against abuse (e.g. hammering it with junk state/code
+// values).
+/** Applied to /auth/github/callback only: 20 requests / 1 min per IP. */
+export const githubCallbackLimiter = buildLimiter({
+  windowMs: ONE_MINUTE_MS,
+  max: 20,
+  prefix: "rl:github-callback:",
+});
+
+// Defense in depth on top of listUserRepos' 60s Redis cache — the cache
+// keeps repeated page loads from hitting GitHub, this keeps a single IP from
+// hitting *us* too hard regardless.
+/** Applied to GET /github/repos only: 30 requests / 1 min per IP. */
+export const githubReposLimiter = buildLimiter({
+  windowMs: ONE_MINUTE_MS,
+  max: 30,
+  prefix: "rl:github-repos:",
 });

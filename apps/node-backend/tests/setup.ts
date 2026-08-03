@@ -10,6 +10,17 @@ process.env.NODE_ENV = "test";
 const currentDir = path.dirname(fileURLToPath(import.meta.url));
 config({ path: path.resolve(currentDir, "../../../.env") });
 
+// Some suites (github.test.ts) exercise real Redis-backed behavior — OAuth
+// state storage, the repo-list cache — so, unlike rate limiting (bypassed
+// entirely under NODE_ENV=test, see middleware/rateLimiter.ts), Redis itself
+// needs to actually work here. Point it at a dedicated logical DB (15) on
+// whatever Redis is already running locally, rather than the docker-compose
+// hostname ("redis") from .env, which only resolves inside that network.
+// DB 15 is flushed (not the whole instance) in afterAll, so this can never
+// touch real data sitting in DB 0. Requires a Redis reachable at
+// 127.0.0.1:6379 — e.g. `brew services start redis` or `redis-server`.
+process.env.REDIS_URL = "redis://127.0.0.1:6379/15";
+
 // Under ESM, static imports of a module execute before that module's own
 // top-level code — so anything that transitively reads env vars via
 // ../src/config/env has to be imported dynamically here, after the lines
@@ -17,13 +28,8 @@ config({ path: path.resolve(currentDir, "../../../.env") });
 const { redisClient } = await import("../src/services/redisClient");
 const { prisma } = await import("../src/lib/prisma");
 
-// Rate limiting is bypassed entirely under NODE_ENV=test (see
-// middleware/rateLimiter.ts), so nothing in this test run ever issues a
-// Redis command. Disconnect immediately rather than let ioredis spend the
-// whole run retrying a connection to a hostname ("redis") that only
-// resolves inside the docker-compose network.
-redisClient.disconnect();
-
 afterAll(async () => {
+  await redisClient.flushdb();
+  redisClient.disconnect();
   await prisma.$disconnect();
 });

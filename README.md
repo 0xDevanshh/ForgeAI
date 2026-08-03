@@ -50,6 +50,25 @@ for caching and lightweight job/session state.
      packages/shared-types — TS interfaces shared between web and node-backend
 ```
 
+## Setup
+
+Two manual, one-time steps before your `.env` is complete:
+
+1. **GitHub OAuth App** — used for GitHub login / repo import in node-backend.
+   - Register one at https://github.com/settings/developers ("New OAuth App")
+   - Authorization callback URL: `http://localhost:4000/auth/github/callback`
+     (adjust the port if you've changed `NODE_BACKEND_PORT`)
+   - Scopes needed: `repo` (read access to private + public repos) and `read:user`
+   - Put the generated values in `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` in `.env`
+
+2. **Encryption key** — node-backend encrypts stored GitHub access tokens at rest
+   (AES-256-GCM, see `apps/node-backend/src/lib/encryption.ts`) using `ENCRYPTION_KEY`,
+   a base64-encoded 32-byte key:
+   ```bash
+   openssl rand -base64 32
+   ```
+   Put the output in `ENCRYPTION_KEY` in `.env`.
+
 ## Running locally
 
 1. Copy the environment template and fill in real secrets:
@@ -67,7 +86,7 @@ for caching and lightweight job/session state.
    pnpm dev
    ```
    This runs `docker compose -f docker-compose.dev.yml up --build`.
-   - web: http://localhost:3000
+   - web: http://localhost:3001
    - node-backend: http://localhost:4000/health
    - ai-service: http://localhost:8000/health
 

@@ -6,7 +6,9 @@ import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
 import { globalLimiter } from "./middleware/rateLimiter";
 import { applySecurityMiddleware } from "./middleware/security";
 import { authRouter } from "./routes/auth.routes";
+import { githubReposRouter, githubRouter } from "./routes/github.routes";
 import { healthRouter } from "./routes/health";
+import { repoRouter } from "./routes/repo.routes";
 
 export const app = express();
 
@@ -21,6 +23,9 @@ app.use("/health", healthRouter);
 
 app.use(globalLimiter);
 app.use("/auth", authRouter);
+app.use("/auth/github", githubRouter);
+app.use("/github", githubReposRouter);
+app.use("/repos", repoRouter);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

@@ -42,6 +42,20 @@ export class TokenExpiredError extends AppError {
   }
 }
 
+// Thrown by github.service when GitHub's API itself reports the primary or
+// secondary rate limit exceeded — this is the caller's fault for calling too
+// often, not our server's fault, so it should surface as 429 with a
+// Retry-After, not the generic 500 an unhandled Octokit error would produce.
+export class GithubRateLimitedError extends AppError {
+  public readonly retryAfter: number;
+
+  constructor(retryAfter: number) {
+    super("GITHUB_RATE_LIMITED", 429);
+    this.retryAfter = retryAfter;
+    Object.setPrototypeOf(this, GithubRateLimitedError.prototype);
+  }
+}
+
 export function notFoundHandler(req: Request, _res: Response, next: NextFunction): void {
   next(new AppError(`Route ${req.method} ${req.originalUrl} not found`, 404));
 }
@@ -66,6 +80,11 @@ export function errorHandler(err: unknown, req: Request, res: Response, _next: N
 
   if (err instanceof TokenExpiredError) {
     body.code = err.code;
+  }
+
+  if (err instanceof GithubRateLimitedError) {
+    res.setHeader("Retry-After", err.retryAfter);
+    body.retryAfter = err.retryAfter;
   }
 
   if (env.NODE_ENV === "development") {

@@ -16,6 +16,18 @@ const rawEnvSchema = z.object({
     .min(1, "ALLOWED_ORIGINS must be a comma-separated list of allowed origins (no wildcard)"),
   GITHUB_CLIENT_ID: z.string().min(1, "GITHUB_CLIENT_ID is required"),
   GITHUB_CLIENT_SECRET: z.string().min(1, "GITHUB_CLIENT_SECRET is required"),
+  GITHUB_CALLBACK_URL: z
+    .string()
+    .url("GITHUB_CALLBACK_URL must be a valid URL")
+    .describe("Must exactly match the callback URL registered on the GitHub OAuth App"),
+  FRONTEND_URL: z.string().url("FRONTEND_URL must be a valid URL"),
+  ENCRYPTION_KEY: z
+    .string()
+    .min(1, "ENCRYPTION_KEY is required")
+    .refine(
+      (value) => Buffer.from(value, "base64").length === 32,
+      "ENCRYPTION_KEY must be a base64-encoded 32-byte key (generate with `openssl rand -base64 32`)",
+    ),
 });
 
 const envSchema = rawEnvSchema.transform((data) => ({
