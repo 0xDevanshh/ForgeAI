@@ -29,6 +29,19 @@ export class ValidationError extends AppError {
   }
 }
 
+// Thrown by token.service when an access token's signature/shape is fine but
+// it's simply expired — callers (e.g. a frontend auth interceptor) need to
+// tell this apart from "not logged in at all" so they know to try a silent
+// refresh instead of redirecting straight to the login page.
+export class TokenExpiredError extends AppError {
+  public readonly code = "TOKEN_EXPIRED" as const;
+
+  constructor() {
+    super("Access token has expired", 401);
+    Object.setPrototypeOf(this, TokenExpiredError.prototype);
+  }
+}
+
 export function notFoundHandler(req: Request, _res: Response, next: NextFunction): void {
   next(new AppError(`Route ${req.method} ${req.originalUrl} not found`, 404));
 }
@@ -49,6 +62,10 @@ export function errorHandler(err: unknown, req: Request, res: Response, _next: N
 
   if (err instanceof ValidationError) {
     body.details = err.details;
+  }
+
+  if (err instanceof TokenExpiredError) {
+    body.code = err.code;
   }
 
   if (env.NODE_ENV === "development") {

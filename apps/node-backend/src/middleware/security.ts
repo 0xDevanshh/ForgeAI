@@ -11,7 +11,9 @@ const corsOptionsDelegate: CorsOptionsDelegate = (req, callback) => {
   // No Origin header means a non-browser client (curl, server-to-server, health
   // checks) — allow it through since the wildcard/browser-origin check doesn't apply.
   if (!origin || env.ALLOWED_ORIGINS.includes(origin)) {
-    callback(null, { origin: true });
+    // credentials: true is required for the browser to send/receive the
+    // httpOnly refresh-token cookie across origins (web app vs. this API).
+    callback(null, { origin: true, credentials: true });
     return;
   }
 

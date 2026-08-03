@@ -5,6 +5,7 @@ export interface ValidationFieldError {
 
 export interface ApiErrorResponse {
   error: string;
+  code?: string;
   details?: ValidationFieldError[];
   retryAfter?: number;
   stack?: string;

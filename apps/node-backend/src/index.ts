@@ -1,30 +1,8 @@
-import "express-async-errors";
-import express from "express";
+import { app } from "./app";
 import { env } from "./config/env";
-import { httpLogger, logger } from "./lib/logger";
-import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
-import { globalLimiter } from "./middleware/rateLimiter";
-import { applySecurityMiddleware } from "./middleware/security";
-import { authRouter } from "./routes/auth";
-import { healthRouter } from "./routes/health";
+import { logger } from "./lib/logger";
 import { closeDbConnection } from "./services/db";
 import { closeRedisConnection } from "./services/redisClient";
-
-const app = express();
-
-applySecurityMiddleware(app);
-app.use(httpLogger);
-app.use(express.json());
-
-// Mounted before globalLimiter so orchestrator health probes never count
-// against the rate-limit budget, no matter how frequently they poll.
-app.use("/health", healthRouter);
-
-app.use(globalLimiter);
-app.use("/auth", authRouter);
-
-app.use(notFoundHandler);
-app.use(errorHandler);
 
 const server = app.listen(env.PORT, () => {
   logger.info(`node-backend listening on port ${env.PORT}`);

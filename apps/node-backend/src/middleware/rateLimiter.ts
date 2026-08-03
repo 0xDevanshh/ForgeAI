@@ -1,6 +1,7 @@
-import type { Request, Response } from "express";
+import type { NextFunction, Request, Response } from "express";
 import rateLimit, { type RateLimitInfo, type RateLimitRequestHandler } from "express-rate-limit";
 import { RedisStore, type RedisReply } from "rate-limit-redis";
+import { env } from "../config/env";
 import { redisClient } from "../services/redisClient";
 import type { ApiErrorResponse } from "../types/http";
 
@@ -14,7 +15,16 @@ async function sendCommand(...args: string[]): Promise<RedisReply> {
   return result as RedisReply;
 }
 
+// Integration tests hit real endpoints many times in quick succession from a
+// single IP (e.g. 5 failed logins to trigger account lockout) and don't run
+// against a live Redis — per-IP throttling would both need Redis and make
+// those tests fail on request counts that have nothing to do with what
+// they're actually testing.
 function buildLimiter(options: { windowMs: number; max: number; prefix: string }): RateLimitRequestHandler {
+  if (env.NODE_ENV === "test") {
+    return ((_req: Request, _res: Response, next: NextFunction) => next()) as RateLimitRequestHandler;
+  }
+
   return rateLimit({
     windowMs: options.windowMs,
     max: options.max,
