@@ -11,6 +11,7 @@ const rawEnvSchema = z.object({
   INTERNAL_SERVICE_SECRET: z
     .string()
     .min(16, "INTERNAL_SERVICE_SECRET must be at least 16 characters"),
+  AI_SERVICE_URL: z.string().url("AI_SERVICE_URL must be a valid URL"),
   ALLOWED_ORIGINS: z
     .string()
     .min(1, "ALLOWED_ORIGINS must be a comma-separated list of allowed origins (no wildcard)"),
