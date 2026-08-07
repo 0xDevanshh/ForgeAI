@@ -153,6 +153,40 @@ if [ "${SKIP_REST:-0}" != "1" ]; then
   else
     record "10 rapid /health/live requests, $blocked/10 got 429 (${codes[*]})" "FAIL"
   fi
+
+  echo
+  echo "${BOLD}==> Step 6: internal-service auth wiring (ai-service <-> node-backend)${RESET}"
+
+  # 1. no key at all -> ai-service must reject it
+  code=$(http_status "http://localhost:${AI_SERVICE_PORT}/internal/ping")
+  if [ "$code" = "401" ]; then
+    record "ai-service GET /internal/ping (no key) -> 401" "PASS"
+  else
+    record "ai-service GET /internal/ping (no key) -> $code (expected 401)" "FAIL"
+  fi
+
+  # 2. correct key, direct to ai-service (bypassing node-backend entirely) -> 200
+  code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 \
+    -H "X-Internal-Key: ${INTERNAL_SERVICE_SECRET}" \
+    "http://localhost:${AI_SERVICE_PORT}/internal/ping" 2>/dev/null)
+  if [ "$code" = "200" ]; then
+    record "ai-service GET /internal/ping (correct key) -> 200" "PASS"
+  else
+    record "ai-service GET /internal/ping (correct key) -> $code (expected 200)" "FAIL"
+  fi
+
+  # 3. node-backend's own test route calls ai-service internally via
+  #    internalHttpClient — the key never comes from us here, node-backend
+  #    attaches it itself.
+  response_with_code=$(curl -s --max-time 10 -w '\n%{http_code}' \
+    "http://localhost:${NODE_BACKEND_PORT}/internal-test/ping" 2>/dev/null)
+  code="${response_with_code##*$'\n'}"
+  body="${response_with_code%$'\n'*}"
+  if [ "$code" = "200" ] && echo "$body" | grep -q '"aiService"' && echo "$body" | grep -q '"status":"ok"'; then
+    record "node-backend GET /internal-test/ping -> 200 with nested ai-service ping" "PASS"
+  else
+    record "node-backend GET /internal-test/ping -> $code, body: $body (expected 200 with nested ai-service ping)" "FAIL"
+  fi
 fi
 
 echo

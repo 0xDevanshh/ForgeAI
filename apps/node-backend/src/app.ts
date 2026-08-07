@@ -9,6 +9,7 @@ import { applySecurityMiddleware } from "./middleware/security";
 import { authRouter } from "./routes/auth.routes";
 import { githubReposRouter, githubRouter } from "./routes/github.routes";
 import { healthRouter } from "./routes/health";
+import { internalTestRouter } from "./routes/internalTest.routes";
 import { repoRouter } from "./routes/repo.routes";
 
 export const app = express();
@@ -29,6 +30,7 @@ app.use((req, _res, next) => {
 // Mounted before globalLimiter so orchestrator health probes never count
 // against the rate-limit budget, no matter how frequently they poll.
 app.use("/health", healthRouter);
+app.use("/internal-test", internalTestRouter);
 
 app.use(globalLimiter);
 app.use("/auth", authRouter);
