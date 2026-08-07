@@ -5,6 +5,11 @@ WORKDIR /app/apps/ai-service
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
+# git is required at runtime by app/services/repo_cloner.py (shells out to
+# `git clone`) — not present in the slim base image by default.
+RUN apt-get update && apt-get install -y --no-install-recommends git \
+    && rm -rf /var/lib/apt/lists/*
+
 # ---- builder: full deps (incl. dev/debug tooling), doubles as the dev runtime ----
 FROM base AS builder
 COPY apps/ai-service/requirements.txt apps/ai-service/requirements-dev.txt ./

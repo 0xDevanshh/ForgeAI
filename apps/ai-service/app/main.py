@@ -4,6 +4,7 @@ from app.config import settings
 from app.lib.logging import configure_logging
 from app.middleware.internal_auth import verify_internal_key
 from app.routers.health import router as health_router
+from app.routers.index_routes import router as index_router
 from app.routers.internal import router as internal_router
 from app.services.db import close_db_connection
 from app.services.qdrant import close_qdrant_connection
@@ -20,6 +21,7 @@ app = FastAPI(title="ai-service")
 # protected — this is the one thing to remember when adding a new router.
 app.include_router(health_router)
 app.include_router(internal_router)
+app.include_router(index_router)
 
 
 @app.on_event("shutdown")
