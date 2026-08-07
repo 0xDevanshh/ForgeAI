@@ -75,6 +75,7 @@ model IndexJob {
   repoId       String
   status       IndexStatus @default(PENDING)
   progress     Int         @default(0) // 0-100
+  chunkCount   Int?
   errorMessage String?
   startedAt    DateTime?
   completedAt  DateTime?

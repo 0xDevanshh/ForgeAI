@@ -1,19 +1,44 @@
 import type { Request, Response } from "express";
 import { Prisma } from "@prisma/client";
+import { indexQueue } from "../lib/queue";
 import { prisma } from "../lib/prisma";
 import { AppError } from "../middleware/errorHandler";
-import { fetchGithubRepo } from "../services/github.service";
+import { buildAuthenticatedCloneUrl, fetchGithubRepo, getDecryptedGithubToken } from "../services/github.service";
+import { redisClient } from "../services/redisClient";
 import type { RepoAddInput } from "../validators/repo.validator";
 
 function repoAlreadyExists(res: Response, repoId: string): void {
   res.status(409).json({ error: "REPO_ALREADY_EXISTS", repoId });
 }
 
+// Shared by createRepo and reindexRepo: builds the token-embedded clone URL,
+// creates the IndexJob row, and enqueues the same job shape the worker
+// expects (src/workers/indexWorker.ts). Returns the new IndexJob's id so the
+// caller can hand it back to the frontend to subscribe to for progress.
+async function enqueueRepoIndexJob(
+  repoId: string,
+  userId: string,
+  fullName: string,
+  defaultBranch: string,
+): Promise<string> {
+  const token = await getDecryptedGithubToken(userId);
+  const cloneUrl = buildAuthenticatedCloneUrl(fullName, token);
+
+  const indexJob = await prisma.indexJob.create({
+    data: { repoId, status: "PENDING" },
+  });
+
+  await indexQueue.add("index-repo", {
+    repoId,
+    cloneUrl,
+    branch: defaultBranch,
+    indexJobId: indexJob.id,
+  });
+
+  return indexJob.id;
+}
+
 // POST /repos — requires authenticate.
-//
-// IMPORTANT: this only registers the repo (indexStatus: PENDING). It does
-// NOT enqueue an indexing job — that's wired up in Step 5/6 via a BullMQ
-// job that picks up PENDING repos. Nothing here starts cloning/parsing.
 export async function createRepo(req: Request, res: Response): Promise<void> {
   if (!req.user) {
     throw new AppError("Unauthorized", 401);
@@ -69,7 +94,9 @@ export async function createRepo(req: Request, res: Response): Promise<void> {
     throw err;
   }
 
-  res.status(201).json(created);
+  const indexJobId = await enqueueRepoIndexJob(created.id, userId, created.fullName, created.defaultBranch);
+
+  res.status(201).json({ ...created, indexJobId });
 }
 
 // GET /repos — requires authenticate.
@@ -114,4 +141,69 @@ export async function deleteRepo(req: Request, res: Response): Promise<void> {
   await prisma.repo.delete({ where: { id } });
 
   res.status(204).send();
+}
+
+const REINDEX_MAX_PER_HOUR = 3;
+const REINDEX_RATE_LIMIT_WINDOW_SECONDS = 60 * 60;
+
+// POST /repos/:id/reindex — requires authenticate.
+export async function reindexRepo(req: Request, res: Response): Promise<void> {
+  if (!req.user) {
+    throw new AppError("Unauthorized", 401);
+  }
+
+  const { id } = req.params;
+  const repo = await prisma.repo.findUnique({ where: { id } });
+
+  if (!repo || repo.userId !== req.user.id) {
+    throw new AppError("Repo not found", 404);
+  }
+
+  // INCR-then-EXPIRE-once counter: cheap per-repo rate limit, distinct from
+  // the generic IP-based limiters in middleware/rateLimiter.ts since this
+  // needs to key on repoId, not the caller's IP.
+  const rateLimitKey = `reindex:${id}`;
+  const count = await redisClient.incr(rateLimitKey);
+  if (count === 1) {
+    await redisClient.expire(rateLimitKey, REINDEX_RATE_LIMIT_WINDOW_SECONDS);
+  }
+
+  if (count > REINDEX_MAX_PER_HOUR) {
+    throw new AppError("Too many re-index requests for this repo — try again later", 429);
+  }
+
+  const indexJobId = await enqueueRepoIndexJob(repo.id, repo.userId, repo.fullName, repo.defaultBranch);
+
+  await prisma.repo.update({ where: { id: repo.id }, data: { indexStatus: "PENDING" } });
+
+  res.status(202).json({ repoId: repo.id, indexJobId });
+}
+
+// GET /repos/:id/index-status — requires authenticate.
+export async function getIndexStatus(req: Request, res: Response): Promise<void> {
+  if (!req.user) {
+    throw new AppError("Unauthorized", 401);
+  }
+
+  const { id } = req.params;
+  const repo = await prisma.repo.findUnique({
+    where: { id },
+    select: { userId: true, indexStatus: true },
+  });
+
+  if (!repo || repo.userId !== req.user.id) {
+    throw new AppError("Repo not found", 404);
+  }
+
+  const latestJob = await prisma.indexJob.findFirst({
+    where: { repoId: id },
+    orderBy: { createdAt: "desc" },
+    select: { progress: true, errorMessage: true },
+  });
+
+  res.status(200).json({
+    indexStatus: repo.indexStatus,
+    progress: latestJob?.progress ?? null,
+    errorMessage: latestJob?.errorMessage ?? null,
+  });
 }

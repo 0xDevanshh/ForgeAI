@@ -92,6 +92,13 @@ export async function getDecryptedGithubToken(userId: string): Promise<string> {
   return decrypt(user.githubAccessToken);
 }
 
+// Matches the format app/services/repo_cloner.py's _build_authenticated_url
+// expects on the ai-service side — clone_url arrives at ai-service with the
+// token already embedded, so it never needs a separate token field.
+export function buildAuthenticatedCloneUrl(fullName: string, token: string): string {
+  return `https://x-access-token:${token}@github.com/${fullName}.git`;
+}
+
 export interface GithubUserProfile {
   username: string;
 }
