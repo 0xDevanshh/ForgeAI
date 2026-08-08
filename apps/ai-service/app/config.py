@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     database_url: str = ""
     redis_url: str = ""
     qdrant_url: str = ""
+    qdrant_api_key: str = ""  # only needed for Qdrant Cloud; local/docker Qdrant has no auth
     internal_service_secret: str = ""
     anthropic_api_key: str = ""
     langsmith_api_key: str = ""

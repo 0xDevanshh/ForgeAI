@@ -1,6 +1,8 @@
 import type { Request, Response } from "express";
 import { Prisma } from "@prisma/client";
 import { indexQueue } from "../lib/queue";
+import { internalHttpClient } from "../lib/internalHttpClient";
+import { logger } from "../lib/logger";
 import { prisma } from "../lib/prisma";
 import { AppError } from "../middleware/errorHandler";
 import { buildAuthenticatedCloneUrl, fetchGithubRepo, getDecryptedGithubToken } from "../services/github.service";
@@ -139,6 +141,16 @@ export async function deleteRepo(req: Request, res: Response): Promise<void> {
   // onDelete: Cascade on IndexJob/ChatSession (see prisma/schema.prisma)
   // handles their cleanup.
   await prisma.repo.delete({ where: { id } });
+
+  // Fire only after the Postgres delete has actually succeeded, and never
+  // fail the request over this — an orphaned Qdrant collection is a minor
+  // cleanup issue, not a user-facing failure. A periodic cleanup job can
+  // reconcile leftover collections later if this turns out to matter.
+  try {
+    await internalHttpClient.delete(`/internal/collections/${id}`);
+  } catch (err) {
+    logger.warn({ err, repoId: id }, "Failed to delete Qdrant collection for repo after Postgres delete");
+  }
 
   res.status(204).send();
 }

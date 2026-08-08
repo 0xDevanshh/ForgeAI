@@ -12,15 +12,30 @@ function indexProgressEvent(repoId: string): string {
 
 const CONCURRENCY = 2;
 
-// 5 minutes — parsing a big repo can take a while; this is a per-call
-// override of internalHttpClient's normal 30s default, not a change to it.
+// 5 minutes each — parsing or embedding a big repo can take a while; these
+// are per-call overrides of internalHttpClient's normal 30s default, not a
+// change to it.
 const AI_SERVICE_PARSE_TIMEOUT_MS = 5 * 60 * 1000;
+const AI_SERVICE_EMBED_TIMEOUT_MS = 5 * 60 * 1000;
 
 interface IndexJobData {
   repoId: string;
   cloneUrl: string;
   branch: string;
   indexJobId: string;
+}
+
+// Matches app/services/code_parser.py's CodeChunk shape exactly — passed
+// through from parse-repo's response straight into embed-and-store's
+// request body, untouched.
+interface AiCodeChunk {
+  content: string;
+  file_path: string;
+  chunk_type: string;
+  name: string | null;
+  start_line: number;
+  end_line: number;
+  language: string;
 }
 
 interface ParseRepoAiResponse {
@@ -30,8 +45,13 @@ interface ParseRepoAiResponse {
     frameworks: string[];
     folder_structure: Record<string, unknown>;
   };
-  chunks: unknown[];
+  chunks: AiCodeChunk[];
   chunk_count: number;
+}
+
+interface EmbedAndStoreAiResponse {
+  status: string;
+  vectors_stored: number;
 }
 
 // internalHttpClient's own response interceptor already replaces any
@@ -91,9 +111,9 @@ async function processIndexJob(job: Job<IndexJobData>): Promise<void> {
       { timeout: AI_SERVICE_PARSE_TIMEOUT_MS },
     );
 
-    const { analysis, chunk_count: chunkCount } = response.data;
+    const { analysis, chunks, chunk_count: chunkCount } = response.data;
 
-    // 3. success: PARSING
+    // 3. parse-repo succeeded: PARSING
     await prisma.repo.update({
       where: { id: repoId },
       data: {
@@ -113,8 +133,39 @@ async function processIndexJob(job: Job<IndexJobData>): Promise<void> {
 
     logger.info({ jobId: job.id, repoId, indexJobId, chunkCount }, "parse-repo stage completed");
 
-    // Chunks themselves get passed to Step 7's embedding stage — Step 6
-    // scope stops here; that work extends this same handler.
+    // 4. EMBEDDING — chain straight into embed-and-store with the chunks
+    // parse-repo just handed back, no extra round-trip needed to fetch them.
+    await prisma.indexJob.update({
+      where: { id: indexJobId },
+      data: { status: "EMBEDDING", progress: 60 },
+    });
+    await prisma.repo.update({ where: { id: repoId }, data: { indexStatus: "EMBEDDING" } });
+    emitToUser(userId, indexProgressEvent(repoId), { status: "EMBEDDING", progress: 60 });
+
+    const embedResponse = await internalHttpClient.post<EmbedAndStoreAiResponse>(
+      "/internal/embed-and-store",
+      { repo_id: repoId, job_id: indexJobId, chunks },
+      { timeout: AI_SERVICE_EMBED_TIMEOUT_MS },
+    );
+
+    const { vectors_stored: vectorsStored } = embedResponse.data;
+
+    // 5. embed-and-store succeeded: COMPLETED
+    const completedAt = new Date();
+
+    await prisma.repo.update({
+      where: { id: repoId },
+      data: { indexStatus: "COMPLETED", lastIndexedAt: completedAt },
+    });
+
+    await prisma.indexJob.update({
+      where: { id: indexJobId },
+      data: { status: "COMPLETED", progress: 100, completedAt },
+    });
+
+    emitToUser(userId, indexProgressEvent(repoId), { status: "COMPLETED", progress: 100, vectorsStored });
+
+    logger.info({ jobId: job.id, repoId, indexJobId, vectorsStored }, "embed-and-store stage completed");
   } catch (err) {
     const maxAttempts = job.opts.attempts ?? 1;
     // Inside the processor, job.attemptsMade counts attempts completed
