@@ -6,8 +6,10 @@ from app.middleware.internal_auth import verify_internal_key
 from app.routers.health import router as health_router
 from app.routers.index_routes import router as index_router
 from app.routers.internal import router as internal_router
+from app.routers.query_routes import router as query_router
 from app.services.db import close_db_connection
 from app.services.qdrant import close_qdrant_connection
+from app.services.redis_client import close_redis_connection
 
 configure_logging()
 
@@ -22,12 +24,14 @@ app = FastAPI(title="ai-service")
 app.include_router(health_router)
 app.include_router(internal_router)
 app.include_router(index_router)
+app.include_router(query_router)
 
 
 @app.on_event("shutdown")
 async def shutdown() -> None:
     await close_db_connection()
     await close_qdrant_connection()
+    await close_redis_connection()
 
 
 @app.get("/", dependencies=[Depends(verify_internal_key)])

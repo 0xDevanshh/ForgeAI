@@ -50,3 +50,12 @@ async def embed_chunks(chunks: list[CodeChunk]) -> list[list[float]]:
             await asyncio.sleep(BATCH_DELAY_SECONDS)
 
     return embeddings
+
+
+async def embed_query(query: str) -> list[float]:
+    """Embeds a single search query with the same model used for indexed
+    chunks — query and chunk vectors must come from the identical model, or
+    they land in different vector spaces and cosine similarity is meaningless.
+    """
+    embeddings = await asyncio.to_thread(model.encode, [query], show_progress_bar=False)
+    return embeddings[0].tolist()

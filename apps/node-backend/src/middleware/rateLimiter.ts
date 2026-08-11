@@ -21,7 +21,15 @@ async function sendCommand(...args: string[]): Promise<RedisReply> {
 // against a live Redis — per-IP throttling would both need Redis and make
 // those tests fail on request counts that have nothing to do with what
 // they're actually testing.
-function buildLimiter(options: { windowMs: number; max: number; prefix: string }): RateLimitRequestHandler {
+function buildLimiter(options: {
+  windowMs: number;
+  max: number;
+  prefix: string;
+  // Defaults to express-rate-limit's own IP-based key. Pass this for a
+  // per-user (rather than per-IP) limit — only safe to use after
+  // `authenticate` has already run, since it needs req.user.
+  keyGenerator?: (req: Request) => string;
+}): RateLimitRequestHandler {
   if (env.NODE_ENV === "test") {
     return ((_req: Request, _res: Response, next: NextFunction) => next()) as RateLimitRequestHandler;
   }
@@ -31,6 +39,7 @@ function buildLimiter(options: { windowMs: number; max: number; prefix: string }
     max: options.max,
     standardHeaders: true, // RateLimit-Limit / RateLimit-Remaining / RateLimit-Reset
     legacyHeaders: false, // no X-RateLimit-*
+    keyGenerator: options.keyGenerator,
     store: new RedisStore({
       sendCommand,
       prefix: options.prefix,
@@ -81,4 +90,16 @@ export const githubReposLimiter = buildLimiter({
   windowMs: ONE_MINUTE_MS,
   max: 30,
   prefix: "rl:github-repos:",
+});
+
+// Per-user (not per-IP) — expensive LLM calls, and IP-based limiting would
+// let one user behind a shared/NAT'd IP rate-limit everyone else on it, or
+// let one user bypass the limit entirely by switching IPs.
+/** Applied to POST /chat/query only: 10 requests / 1 min per user. Must be
+ * mounted after `authenticate` — its keyGenerator reads req.user. */
+export const chatQueryLimiter = buildLimiter({
+  windowMs: ONE_MINUTE_MS,
+  max: 10,
+  prefix: "rl:chat-query:",
+  keyGenerator: (req) => req.user?.id ?? req.ip ?? "unknown",
 });
