@@ -20,7 +20,34 @@ def _build_context_block(chunks: list[RetrievedChunk]) -> str:
     return "\n\n".join(_format_chunk(chunk) for chunk in chunks)
 
 
+def _format_previous_issues(verdict: dict) -> str:
+    issues = [*verdict["grounding_issues"], *verdict["missing_info"]]
+    bullet_list = "\n".join(f"- {issue}" for issue in issues)
+    return f"Your previous answer had these issues:\n{bullet_list}\nPlease address them specifically."
+
+
+def attach_incomplete_flag(state: GraphState) -> GraphState:
+    """Called by builder.should_regenerate when retries are exhausted without
+    approval, so the frontend can show a "may be incomplete" indicator
+    instead of presenting an unverified answer as fully trustworthy."""
+    verdict = state["reviewer_verdict"]
+    state["generated_response"] = {
+        "response": state["generated_response"],
+        "reviewer_approved": False,
+        "reviewer_notes": [*verdict["grounding_issues"], *verdict["missing_info"]],
+    }
+    return state
+
+
 async def architecture_agent_node(state: GraphState) -> GraphState:
+    # reviewer_verdict is only set once a full round has completed, so its
+    # presence is what distinguishes a regeneration entry from the initial
+    # call — not just regeneration_count, which would otherwise need to be
+    # incremented before we know whether there's a previous verdict to read.
+    previous_verdict = state.get("reviewer_verdict")
+    if previous_verdict is not None:
+        state["regeneration_count"] += 1
+
     chunks = await search_codebase(state["repo_id"], state["query"])
     # Stored on state (not just used locally) so the Reviewer node can later
     # check the generated response's claims against the same chunks.
@@ -28,13 +55,14 @@ async def architecture_agent_node(state: GraphState) -> GraphState:
 
     context_block = _build_context_block(chunks)
 
+    user_content = f"Code context:\n\n{context_block}\n\nQuestion: {state['query']}"
+    if previous_verdict is not None:
+        user_content += f"\n\n{_format_previous_issues(previous_verdict)}"
+
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT},
         *state["chat_history"],
-        {
-            "role": "user",
-            "content": f"Code context:\n\n{context_block}\n\nQuestion: {state['query']}",
-        },
+        {"role": "user", "content": user_content},
     ]
 
     llm = get_llm("architecture")
