@@ -10,6 +10,7 @@ import { authRouter } from "./routes/auth.routes";
 import { chatRouter } from "./routes/chat.routes";
 import { githubReposRouter, githubRouter } from "./routes/github.routes";
 import { healthRouter } from "./routes/health";
+import { internalRepoRouter } from "./routes/internalRepo.routes";
 import { internalTestRouter } from "./routes/internalTest.routes";
 import { repoRouter } from "./routes/repo.routes";
 
@@ -28,10 +29,13 @@ app.use((req, _res, next) => {
   runWithRequestContext(String(req.id), next);
 });
 
-// Mounted before globalLimiter so orchestrator health probes never count
-// against the rate-limit budget, no matter how frequently they poll.
+// Mounted before globalLimiter so orchestrator health probes — and, for
+// /internal/repos, ai-service's own internal calls — never count against
+// the IP-based rate limit meant for end-user traffic. Auth for
+// /internal/repos is verifyInternalKey (checked per-route), not this limiter.
 app.use("/health", healthRouter);
 app.use("/internal-test", internalTestRouter);
+app.use("/internal/repos", internalRepoRouter);
 
 app.use(globalLimiter);
 app.use("/auth", authRouter);

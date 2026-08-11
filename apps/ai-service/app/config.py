@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     qdrant_url: str = ""
     qdrant_api_key: str = ""  # only needed for Qdrant Cloud; local/docker Qdrant has no auth
     internal_service_secret: str = ""
+    node_backend_url: str = ""  # base URL for calling back into node-backend's /internal routes
     anthropic_api_key: str = ""
     langsmith_api_key: str = ""
     langsmith_project: str = "ai-codebase-copilot"

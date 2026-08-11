@@ -280,3 +280,119 @@ export async function fetchGithubRepo(userId: string, owner: string, repo: strin
     defaultBranch: response.data.default_branch,
   };
 }
+
+export interface CommitSummary {
+  sha: string;
+  message: string;
+  author: string | null;
+  date: string;
+  filesChanged: string[];
+}
+
+const COMMITS_DEFAULT_LIMIT = 10;
+
+// GitHub's list-commits endpoint only filters by a single `path`, but
+// callers (ai-service's fetch_recent_commits) may want commits touching any
+// of several files — so this queries once per path and merges by sha.
+// filesChanged isn't in the list response (only in the single-commit
+// response), so it's backfilled with one getCommit call per commit, but
+// only for the final, already-limited set.
+export async function fetchRecentCommits(
+  userId: string,
+  owner: string,
+  repo: string,
+  filePaths: string[],
+  limit = COMMITS_DEFAULT_LIMIT,
+): Promise<CommitSummary[]> {
+  const token = await getDecryptedGithubToken(userId);
+  const octokit = new Octokit({ auth: token, userAgent: USER_AGENT });
+
+  const paths = filePaths.length > 0 ? filePaths : [undefined];
+  const seen = new Map<string, { message: string; author: string | null; date: string }>();
+
+  for (const path of paths) {
+    let response;
+    try {
+      response = await octokit.rest.repos.listCommits({ owner, repo, path, per_page: limit });
+    } catch (err) {
+      const rateLimitError = toRateLimitError(err);
+      if (rateLimitError) {
+        logger.warn({ userId, retryAfter: rateLimitError.retryAfter }, "GitHub API rate limit exceeded");
+        throw rateLimitError;
+      }
+      if (err instanceof RequestError && err.status === 404) {
+        throw new AppError("GITHUB_REPO_NOT_FOUND", 404);
+      }
+      throw err;
+    }
+
+    for (const commit of response.data) {
+      if (seen.has(commit.sha)) continue;
+      seen.set(commit.sha, {
+        message: commit.commit.message,
+        author: commit.commit.author?.name ?? commit.author?.login ?? null,
+        date: commit.commit.author?.date ?? new Date(0).toISOString(),
+      });
+    }
+  }
+
+  const topShas = [...seen.entries()].sort((a, b) => (a[1].date < b[1].date ? 1 : -1)).slice(0, limit);
+
+  const commits: CommitSummary[] = [];
+  for (const [sha, meta] of topShas) {
+    let detail;
+    try {
+      detail = await octokit.rest.repos.getCommit({ owner, repo, ref: sha });
+    } catch (err) {
+      const rateLimitError = toRateLimitError(err);
+      if (rateLimitError) {
+        logger.warn({ userId, retryAfter: rateLimitError.retryAfter }, "GitHub API rate limit exceeded");
+        throw rateLimitError;
+      }
+      throw err;
+    }
+    commits.push({
+      sha,
+      message: meta.message,
+      author: meta.author,
+      date: meta.date,
+      filesChanged: (detail.data.files ?? []).map((f) => f.filename),
+    });
+  }
+
+  return commits;
+}
+
+// Fetches a single commit's raw unified diff, for ai-service's
+// fetch_commit_diff. mediaType.format: "diff" makes Octokit set
+// `Accept: application/vnd.github.v3.diff`, so GitHub returns the diff text
+// directly instead of the default JSON commit object.
+export async function fetchCommitDiff(userId: string, owner: string, repo: string, sha: string): Promise<string> {
+  const token = await getDecryptedGithubToken(userId);
+  const octokit = new Octokit({ auth: token, userAgent: USER_AGENT });
+
+  let response;
+  try {
+    response = await octokit.rest.repos.getCommit({
+      owner,
+      repo,
+      ref: sha,
+      mediaType: { format: "diff" },
+    });
+  } catch (err) {
+    const rateLimitError = toRateLimitError(err);
+    if (rateLimitError) {
+      logger.warn({ userId, retryAfter: rateLimitError.retryAfter }, "GitHub API rate limit exceeded");
+      throw rateLimitError;
+    }
+    if (err instanceof RequestError && err.status === 404) {
+      throw new AppError("GITHUB_COMMIT_NOT_FOUND", 404);
+    }
+    throw err;
+  }
+
+  // With mediaType.format: "diff", GitHub returns the raw diff as
+  // response.data — Octokit's types still describe the default JSON shape
+  // here, so this cast is deliberate, not an oversight.
+  return response.data as unknown as string;
+}
