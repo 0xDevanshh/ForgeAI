@@ -19,6 +19,8 @@ dist/
 build/
 .next/
 out/
+next-env.d.ts
+*.tsbuildinfo
 
 # Docker volumes (bind-mounted data dirs, if created locally)
 qdrant_storage/

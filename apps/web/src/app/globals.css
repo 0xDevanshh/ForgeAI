@@ -1,0 +1,440 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ==========================================================================
+   BLUEPRINT DESIGN SYSTEM — design tokens
+   --------------------------------------------------------------------------
+   Colors are authored as space-separated RGB channels (`--x-rgb: 13 17 23`)
+   so Tailwind can inject alpha via `rgb(var(--x-rgb) / <alpha-value>)` and
+   utilities like `bg-surface/60` keep working. Each channel triplet is
+   paired with a ready-to-use color (`--x: rgb(var(--x-rgb))`) for handwritten
+   CSS, so there is exactly ONE source of truth per color.
+
+   Dark is the default theme (`:root`). Light overrides live in `.light`.
+   ========================================================================== */
+
+@layer base {
+  :root {
+    /* ---- Color: surfaces ------------------------------------------------ */
+    --bg-base-rgb: 13 17 23; /* #0D1117 deep slate, not pure black */
+    --bg-surface-rgb: 22 27 34; /* #161B22 raised cards/panels */
+    --bg-elevated-rgb: 28 33 40; /* #1C2128 modals, dropdowns */
+
+    /* ---- Color: borders ------------------------------------------------- */
+    --border-subtle-rgb: 33 38 45; /* #21262D */
+    --border-strong-rgb: 48 54 61; /* #30363D */
+
+    /* ---- Color: text ---------------------------------------------------- */
+    --text-primary-rgb: 230 237 243; /* #E6EDF3 */
+    --text-secondary-rgb: 139 148 158; /* #8B949E */
+    --text-muted-rgb: 110 118 129; /* #6E7681 */
+
+    /* ---- Color: brand accent -------------------------------------------- */
+    --accent-rgb: 76 141 255; /* #4C8DFF blueprint ink */
+    --accent-hover-rgb: 59 125 245; /* #3B7DF5 */
+    /* Near-black on the bright accent: white would only hit 3.2:1 on
+       #4C8DFF (fails AA). #0D1117 hits 5.9:1 and reads sharper anyway. */
+    --on-accent-rgb: 13 17 23;
+
+    /* ---- Color: status -------------------------------------------------- */
+    --success-rgb: 63 185 80; /* #3FB950 index complete */
+    --warning-rgb: 210 153 34; /* #D29922 reviewer "may be incomplete" */
+    --danger-rgb: 248 81 73; /* #F85149 index failed */
+
+    /* ---- Color: agent identity ------------------------------------------
+       A ramp kept deliberately separate from status colors, so "this answer
+       came from the docs agent" never reads as "something succeeded".
+       Architecture reuses the accent; the other three get their own hue. */
+    --agent-architecture-rgb: 76 141 255; /* accent blue */
+    --agent-bug-rgb: 248 81 73; /* red */
+    --agent-pr-rgb: 163 113 247; /* #A371F7 violet */
+    --agent-docs-rgb: 57 197 207; /* #39C5CF cyan */
+
+    /* ---- Color: shadcn bridge ------------------------------------------
+       shadcn's `--accent` means "subtle hover background", NOT a brand
+       accent — mapping our blue here would turn every menu hover bright
+       blue. Our blue maps to shadcn's `primary` instead. */
+    --hover-surface-rgb: 33 38 45;
+
+    /* ---- Ready-to-use colors --------------------------------------------
+       Token names follow the design spec; note the Tailwind color KEY for
+       this one is `canvas` (see tailwind.config.ts) to dodge the
+       `text-base` font-size collision. */
+    --bg-base: rgb(var(--bg-base-rgb));
+    --bg-surface: rgb(var(--bg-surface-rgb));
+    --bg-elevated: rgb(var(--bg-elevated-rgb));
+    --border-subtle: rgb(var(--border-subtle-rgb));
+    --border-strong: rgb(var(--border-strong-rgb));
+    --text-primary: rgb(var(--text-primary-rgb));
+    --text-secondary: rgb(var(--text-secondary-rgb));
+    --text-muted: rgb(var(--text-muted-rgb));
+    --accent: rgb(var(--accent-rgb));
+    --accent-hover: rgb(var(--accent-hover-rgb));
+    --on-accent: rgb(var(--on-accent-rgb));
+    --success: rgb(var(--success-rgb));
+    --warning: rgb(var(--warning-rgb));
+    --danger: rgb(var(--danger-rgb));
+
+    /* ---- Typography: families ------------------------------------------
+       Assigned from next/font in layout.tsx. Fallbacks keep the app
+       readable if a font fails to load. */
+    --font-display: var(--font-instrument-sans), ui-sans-serif, system-ui, sans-serif;
+    --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+    --font-mono: var(--font-geist-mono), ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+    /* ---- Typography: scale ----------------------------------------------
+       1.25 ratio anchored at --text-base (16px) and applied exactly for
+       every step at or above base, where heading hierarchy depends on it.
+       xs/sm are rounded UP off-ratio (a true 10.24px xs is unreadable for
+       the file paths and SHAs this UI leans on). Deviation is deliberate. */
+    --text-xs: 0.75rem; /* 12px    — off-ratio, legibility floor */
+    --text-sm: 0.875rem; /* 14px    — off-ratio, legibility floor */
+    --text-base: 1rem; /* 16px    — anchor */
+    --text-lg: 1.25rem; /* 20px    — base x 1.25 */
+    --text-xl: 1.5625rem; /* 25px    — x 1.25 */
+    --text-2xl: 1.9531rem; /* 31.25px — x 1.25 */
+    --text-3xl: 2.4414rem; /* 39.06px — x 1.25 */
+    --text-4xl: 3.0518rem; /* 48.83px — x 1.25 */
+
+    /* ---- Typography: tracking ------------------------------------------- */
+    --tracking-tight: -0.02em; /* headings */
+    --tracking-normal: 0em;
+    --tracking-wide: 0.02em; /* mono tags, overlines */
+    --leading-body: 1.6; /* long AI responses */
+
+    /* ---- Spacing: 4px unit, 8px rhythm ----------------------------------
+       Even steps land on the 8px grid; odd steps exist for tight spots
+       (icon gaps, badge padding) and should stay the exception. */
+    --space-1: 0.25rem; /* 4px  */
+    --space-2: 0.5rem; /* 8px  */
+    --space-3: 0.75rem; /* 12px */
+    --space-4: 1rem; /* 16px */
+    --space-5: 1.25rem; /* 20px */
+    --space-6: 1.5rem; /* 24px */
+    --space-8: 2rem; /* 32px */
+    --space-10: 2.5rem; /* 40px */
+    --space-12: 3rem; /* 48px */
+    --space-16: 4rem; /* 64px */
+
+    /* ---- Radius: restrained --------------------------------------------- */
+    --radius-sm: 6px; /* inputs, buttons, badges */
+    --radius-md: 10px; /* cards, panels */
+    --radius-lg: 14px; /* modals, popovers */
+
+    /* ---- Elevation ------------------------------------------------------
+       Only for genuinely floating elements. Structure comes from 1px
+       borders — that is the blueprint discipline. */
+    --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.28);
+    --shadow-md: 0 4px 12px rgb(0 0 0 / 0.36);
+    --shadow-lg: 0 16px 40px rgb(0 0 0 / 0.48);
+
+    /* ---- Layout ---------------------------------------------------------- */
+    --measure: 768px; /* max width for reading areas */
+
+    /* ---- Motion ---------------------------------------------------------- */
+    --duration-fast: 120ms;
+    --duration-base: 150ms;
+    --duration-slow: 240ms;
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+    /* ---- Signature: blueprint grid --------------------------------------- */
+    --grid-size: 32px; /* 4 x 8px rhythm */
+    --grid-opacity: 0.55;
+
+    color-scheme: dark;
+  }
+
+  .light {
+    --bg-base-rgb: 245 247 250; /* #F5F7FA blueprint paper */
+    --bg-surface-rgb: 255 255 255; /* #FFFFFF */
+    --bg-elevated-rgb: 255 255 255; /* #FFFFFF — separated by shadow, not hue */
+
+    --border-subtle-rgb: 227 232 239; /* #E3E8EF */
+    --border-strong-rgb: 198 208 220; /* #C6D0DC */
+
+    --text-primary-rgb: 13 17 23; /* #0D1117 */
+    --text-secondary-rgb: 74 85 97; /* #4A5561 */
+    --text-muted-rgb: 110 118 129; /* #6E7681 */
+
+    /* Darkened so the accent clears AA on white: #4C8DFF would sit at
+       2.9:1 against #FFFFFF. */
+    --accent-rgb: 31 111 235; /* #1F6FEB */
+    --accent-hover-rgb: 26 95 208; /* #1A5FD0 */
+    --on-accent-rgb: 255 255 255;
+
+    --success-rgb: 26 127 55; /* #1A7F37 */
+    --warning-rgb: 154 103 0; /* #9A6700 */
+    --danger-rgb: 207 34 46; /* #CF222E */
+
+    --agent-architecture-rgb: 31 111 235;
+    --agent-bug-rgb: 207 34 46;
+    --agent-pr-rgb: 130 80 223; /* #8250DF */
+    --agent-docs-rgb: 27 124 131; /* #1B7C83 */
+
+    --hover-surface-rgb: 240 243 247;
+
+    --shadow-sm: 0 1px 2px rgb(15 23 42 / 0.06);
+    --shadow-md: 0 4px 12px rgb(15 23 42 / 0.08);
+    --shadow-lg: 0 16px 40px rgb(15 23 42 / 0.12);
+
+    --grid-opacity: 0.9;
+
+    color-scheme: light;
+  }
+}
+
+/* ==========================================================================
+   BASE ELEMENTS
+   ========================================================================== */
+
+@layer base {
+  * {
+    @apply border-subtle;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-canvas font-sans text-foreground antialiased;
+    font-size: var(--text-base);
+    line-height: var(--leading-body);
+    /* Bare `--font-*` vars carry no fallback stack of their own, so if a
+       next/font fails the browser still lands on a sane family. */
+    font-feature-settings: "cv11", "ss01";
+    font-variant-ligatures: contextual;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-display text-foreground;
+    letter-spacing: var(--tracking-tight);
+    line-height: 1.2;
+    text-wrap: balance;
+  }
+
+  code,
+  kbd,
+  pre,
+  samp {
+    @apply font-mono;
+    font-feature-settings: "zero" 1; /* slashed zero — SHAs are read literally */
+  }
+
+  /* Focus: one consistent ring everywhere, keyboard-only. */
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
+
+  ::selection {
+    background: rgb(var(--accent-rgb) / 0.28);
+    color: var(--text-primary);
+  }
+
+  /* Scrollbars tuned to the surface ladder rather than the OS default. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(var(--border-strong-rgb)) transparent;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: rgb(var(--border-strong-rgb));
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: rgb(var(--text-muted-rgb));
+    background-clip: content-box;
+  }
+}
+
+/* ==========================================================================
+   SIGNATURE — blueprint grid
+   --------------------------------------------------------------------------
+   The one memorable thing: an architect's gridded worksheet under the app
+   shell. Fixed so it reads as the surface the app sits ON rather than
+   something that scrolls with content, and radially masked so it never
+   competes with the reading column at center.
+   ========================================================================== */
+
+@layer components {
+  .bp-grid {
+    position: relative;
+    isolation: isolate;
+  }
+
+  .bp-grid::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-image:
+      linear-gradient(to right, rgb(var(--border-subtle-rgb) / var(--grid-opacity)) 1px, transparent 1px),
+      linear-gradient(to bottom, rgb(var(--border-subtle-rgb) / var(--grid-opacity)) 1px, transparent 1px);
+    background-size: var(--grid-size) var(--grid-size);
+    /* Anchored top-center and fading out toward the lower edge, so the grid
+       reads as the sheet the workspace sits on without ever crowding the
+       reading column. Wide enough to stay perceptible across the viewport —
+       a tighter mask made the signature element effectively invisible. */
+    -webkit-mask-image: radial-gradient(ellipse 145% 115% at 50% 0%, #000 25%, transparent 92%);
+    mask-image: radial-gradient(ellipse 145% 115% at 50% 0%, #000 25%, transparent 92%);
+  }
+
+  /* Dotted variant — for panels where lines would fight with dense content. */
+  .bp-dots::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-image: radial-gradient(
+      rgb(var(--border-strong-rgb) / var(--grid-opacity)) 1px,
+      transparent 1px
+    );
+    background-size: var(--space-4) var(--space-4);
+  }
+
+  /* ---- Signature: agent tags ------------------------------------------
+     Code-editor gutter markers, not emoji pills. Monospace carries real
+     meaning in a tool that reads code. */
+  .agent-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-1) var(--space-2);
+    border-left: 2px solid rgb(var(--agent-rgb));
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    background: rgb(var(--agent-rgb) / 0.1);
+    color: rgb(var(--agent-rgb));
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    line-height: 1.4;
+    letter-spacing: var(--tracking-wide);
+    white-space: nowrap;
+  }
+
+  .agent-tag--architecture {
+    --agent-rgb: var(--agent-architecture-rgb);
+  }
+  .agent-tag--bug-investigation {
+    --agent-rgb: var(--agent-bug-rgb);
+  }
+  .agent-tag--pr-summary {
+    --agent-rgb: var(--agent-pr-rgb);
+  }
+  .agent-tag--documentation {
+    --agent-rgb: var(--agent-docs-rgb);
+  }
+
+  /* ---- Streaming indicator ---------------------------------------------
+     A quiet three-dot pulse. Deliberately not a spinner: spinners imply
+     "blocked, wait", this implies "thinking, text is coming". */
+  .streaming-dots {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+  }
+
+  .streaming-dots > span {
+    width: 4px;
+    height: 4px;
+    border-radius: 9999px;
+    background-color: rgb(var(--text-muted-rgb));
+    animation: bp-pulse 1.4s var(--ease-out) infinite;
+  }
+
+  .streaming-dots > span:nth-child(2) {
+    animation-delay: 0.2s;
+  }
+  .streaming-dots > span:nth-child(3) {
+    animation-delay: 0.4s;
+  }
+}
+
+/* ==========================================================================
+   UTILITIES
+   ========================================================================== */
+
+@layer utilities {
+  /* Reading column — AI responses stretched edge-to-edge hurt readability. */
+  .measure {
+    max-width: var(--measure);
+  }
+
+  /* Route/content entrance: 150ms fade + slide, per the motion spec. */
+  .animate-enter {
+    animation: bp-enter var(--duration-base) var(--ease-out) both;
+  }
+
+  /* Hairline separator that respects the grid rather than a heavy border. */
+  .rule {
+    border: 0;
+    border-top: 1px solid rgb(var(--border-subtle-rgb));
+  }
+}
+
+@keyframes bp-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes bp-pulse {
+  0%,
+  60%,
+  100% {
+    opacity: 0.25;
+    transform: scale(0.85);
+  }
+  30% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ==========================================================================
+   REDUCED MOTION — disable everything non-essential
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* The streaming indicator still has to signal "working", so it keeps a
+     static visible state instead of vanishing mid-pulse. */
+  .streaming-dots > span {
+    opacity: 0.6;
+    transform: none;
+  }
+}
