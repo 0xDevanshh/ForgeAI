@@ -2,6 +2,7 @@ from langgraph.graph import END, StateGraph
 
 from app.agents.architecture_agent import architecture_agent_node, attach_incomplete_flag
 from app.agents.bug_investigation_agent import bug_investigation_node
+from app.agents.documentation_agent import documentation_node
 from app.agents.planner import planner_node
 from app.agents.pr_summary_agent import pr_summary_node
 from app.agents.reviewer import reviewer_node
@@ -28,14 +29,6 @@ def after_pr_summary(state: GraphState) -> str:
     return "reviewer" if state.get("github_context") is not None else "end"
 
 
-def passthrough_node(state: GraphState) -> GraphState:
-    # Temporary — exists only to prove routing works end-to-end before the
-    # real documentation node lands in Step 13. Replaced node-by-node as
-    # each one is built.
-    state["generated_response"] = f"[DEBUG] Classified as: {state['intent']}"
-    return state
-
-
 def build_graph():
     graph = StateGraph(GraphState)
 
@@ -43,8 +36,8 @@ def build_graph():
     graph.add_node("architecture_agent", architecture_agent_node)
     graph.add_node("bug_investigation_agent", bug_investigation_node)
     graph.add_node("pr_summary_agent", pr_summary_node)
+    graph.add_node("documentation_agent", documentation_node)
     graph.add_node("reviewer", reviewer_node)
-    graph.add_node("passthrough", passthrough_node)
 
     graph.set_entry_point("planner")
 
@@ -55,12 +48,13 @@ def build_graph():
             "architecture": "architecture_agent",
             "bug_investigation": "bug_investigation_agent",
             "pr_summary": "pr_summary_agent",
-            "documentation": "passthrough",  # will become a real node in Step 13
+            "documentation": "documentation_agent",
         },
     )
 
     graph.add_edge("architecture_agent", "reviewer")
     graph.add_edge("bug_investigation_agent", "reviewer")
+    graph.add_edge("documentation_agent", "reviewer")
     graph.add_conditional_edges(
         "pr_summary_agent",
         after_pr_summary,
@@ -74,8 +68,8 @@ def build_graph():
             "regenerate_architecture": "architecture_agent",
             "regenerate_bug_investigation": "bug_investigation_agent",
             "regenerate_pr_summary": "pr_summary_agent",
+            "regenerate_documentation": "documentation_agent",
         },
     )
-    graph.add_edge("passthrough", END)
 
     return graph.compile()
