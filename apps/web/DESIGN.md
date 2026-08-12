@@ -128,6 +128,14 @@ lands at 10.24px, unreadable for the file paths and SHAs this UI leans on.
 - Reading areas cap at **768px** (`--measure` / `max-w-measure`). AI answers
   stretched edge-to-edge are measurably harder to read.
 
+### Layout widths
+
+| Token | Tailwind | Size | Use |
+| --- | --- | --- | --- |
+| `--measure` | `max-w-measure` | 768px | Reading columns, long-form answers |
+| `--measure-form` | `max-w-form` | 420px | Single-column form cards (auth) |
+| `--sidebar-width` | `w-sidebar` | 240px | App shell sidebar + mobile drawer |
+
 ---
 
 ## Spacing — 8px grid
@@ -159,14 +167,18 @@ shadow.
 
 ## Motion
 
-| Token | Value |
-| --- | --- |
-| `--duration-fast` | 120ms |
-| `--duration-base` | 150ms |
-| `--duration-slow` | 240ms |
-| `--ease-out` | `cubic-bezier(0.16, 1, 0.3, 1)` |
+| Token | Value | Use |
+| --- | --- | --- |
+| `--duration-fast` | 120ms | Hover, small state flips |
+| `--duration-base` | 150ms | Route/content entrance, most transitions |
+| `--duration-slow` | 240ms | Drawers, sheets |
+| `--duration-draw` | 1400ms | Ambient motif stroke draw |
+| `--duration-scan` | 7s | Ambient motif sweep |
 
 Tailwind: `duration-fast/base/slow`, `ease-out`.
+
+The two ambient durations are deliberately far slower than any interaction
+feedback, so the auth motif never reads as a pending operation.
 
 - Route/content entrance: `.animate-enter` — 150ms fade + 4px slide.
 - Streaming agent status: `<StreamingIndicator />` — a quiet three-dot pulse.
@@ -174,7 +186,10 @@ Tailwind: `duration-fast/base/slow`, `ease-out`.
   "thinking, text is coming."
 - `prefers-reduced-motion: reduce` disables all non-essential motion globally.
   The streaming indicator degrades to a static visible state so it still
-  signals activity.
+  signals activity, and the blueprint motif lands on its final drawn state.
+- `.motion-only` hides purely kinetic glyphs (a spinning icon) under reduced
+  motion — frozen mid-spin reads as broken, so the accompanying label carries
+  the state instead.
 
 ---
 
@@ -196,6 +211,31 @@ makes the product recognizable — present, never distracting.
 Small monospace tags with a colored **left border** — code-editor gutter
 markers, not emoji + pill badges. More professional and on-brand for a dev tool.
 Values mirror the planner's `intent` in `apps/ai-service`.
+
+The same gutter-marker idea drives the sidebar's active nav item: a 2px
+`--accent` left border, like an editor's active-line marker. Inactive items
+reserve the same 2px as a transparent border so labels never shift.
+
+### Auth blueprint motif
+
+`<BlueprintMotif />` draws an architecture diagram stroke-by-stroke, then sweeps
+a slow accent line down it — the product "reading" a codebase. Uses
+`.motif-draw` (staggered by a `--motif-index` custom property) and
+`.motif-scan`. Decorative, so it's hidden from assistive tech.
+
+---
+
+## App shell
+
+`src/app/(dashboard)/layout.tsx` composes the shell and guards the routes.
+
+- **Desktop (≥768px):** fixed `w-sidebar` sidebar on `--bg-surface` with a
+  hairline right border. Wordmark, nav, then user panel (avatar, email, theme
+  toggle, sign out) pinned to the bottom.
+- **Mobile (<768px):** the sidebar becomes a slide-over drawer behind a sticky
+  top bar. `SidebarContent` is shared by both so they can't drift.
+- Main content carries the `.bp-grid` texture; each screen sets its own
+  max-width (`max-w-measure` for reading, wider for lists).
 
 ---
 
@@ -244,7 +284,25 @@ surface with a 1px border.
 
 ---
 
+## Copy discipline
+
+Active voice, sentence case, specific. Errors say what happened and what to do
+next — never a status code:
+
+| Instead of | Write |
+| --- | --- |
+| "Error 401" | "That email or password didn't match." |
+| "Validation failed" | "That doesn't look like an email address." |
+| "429 Too Many Requests" | "Too many attempts. Try again in 9 minutes." |
+
+One deliberate exception to specificity: a failed **signup** never says the
+email is taken. The backend returns an intentionally vague conflict message so
+`/auth/signup` can't be probed to enumerate registered accounts, and the UI
+preserves that — "We couldn't create an account with those details."
+
+---
+
 ## Reference
 
-`/` renders a live style guide of every token and component in
-[`src/app/page.tsx`](src/app/page.tsx). Check changes against it.
+`/design` renders a live style guide of every token and component in
+[`src/app/design/page.tsx`](src/app/design/page.tsx). Check changes against it.

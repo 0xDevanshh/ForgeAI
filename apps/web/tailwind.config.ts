@@ -128,6 +128,11 @@ const config: Config = {
 
       maxWidth: {
         measure: "var(--measure)",
+        form: "var(--measure-form)",
+      },
+
+      width: {
+        sidebar: "var(--sidebar-width)",
       },
 
       transitionTimingFunction: {

@@ -131,11 +131,18 @@
 
     /* ---- Layout ---------------------------------------------------------- */
     --measure: 768px; /* max width for reading areas */
+    --measure-form: 420px; /* max width for a single-column form card */
+    --sidebar-width: 240px;
 
     /* ---- Motion ---------------------------------------------------------- */
     --duration-fast: 120ms;
     --duration-base: 150ms;
     --duration-slow: 240ms;
+    /* Long-form, ambient motion for the auth blueprint motif — deliberately
+       far slower than any interaction feedback so it never reads as a
+       pending operation. */
+    --duration-draw: 1400ms;
+    --duration-scan: 7s;
     --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 
     /* ---- Signature: blueprint grid --------------------------------------- */
@@ -346,6 +353,22 @@
     --agent-rgb: var(--agent-docs-rgb);
   }
 
+  /* ---- Signature: auth blueprint motif ---------------------------------
+     Strokes draw themselves in on mount, staggered by --motif-index, then a
+     slow accent line sweeps the diagram — the product "reading" a codebase.
+     Under reduced motion the global killswitch collapses the duration, which
+     leaves every stroke at its final drawn state (fill-mode: forwards). */
+  .motif-draw {
+    stroke-dasharray: var(--motif-len);
+    stroke-dashoffset: var(--motif-len);
+    animation: bp-draw var(--duration-draw) var(--ease-out) forwards;
+    animation-delay: calc(var(--motif-index, 0) * var(--duration-fast));
+  }
+
+  .motif-scan {
+    animation: bp-scan var(--duration-scan) linear infinite;
+  }
+
   /* ---- Streaming indicator ---------------------------------------------
      A quiet three-dot pulse. Deliberately not a spinner: spinners imply
      "blocked, wait", this implies "thinking, text is coming". */
@@ -404,6 +427,27 @@
   }
 }
 
+@keyframes bp-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes bp-scan {
+  0% {
+    opacity: 0;
+    transform: translateY(-8%);
+  }
+  12%,
+  78% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(108%);
+  }
+}
+
 @keyframes bp-pulse {
   0%,
   60%,
@@ -436,5 +480,11 @@
   .streaming-dots > span {
     opacity: 0.6;
     transform: none;
+  }
+
+  /* Purely kinetic affordances (a spinning glyph) read as broken when frozen
+     mid-spin — hide them and let the accompanying label carry the state. */
+  .motion-only {
+    display: none;
   }
 }
