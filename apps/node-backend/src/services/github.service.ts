@@ -363,6 +363,42 @@ export async function fetchRecentCommits(
   return commits;
 }
 
+// Fetches a single commit's metadata (no diff), for ai-service's
+// fetch_commit_metadata — used by the PR-summary agent, which needs one
+// specific commit rather than a filtered/sorted list.
+export async function fetchCommitMetadata(
+  userId: string,
+  owner: string,
+  repo: string,
+  sha: string,
+): Promise<CommitSummary> {
+  const token = await getDecryptedGithubToken(userId);
+  const octokit = new Octokit({ auth: token, userAgent: USER_AGENT });
+
+  let response;
+  try {
+    response = await octokit.rest.repos.getCommit({ owner, repo, ref: sha });
+  } catch (err) {
+    const rateLimitError = toRateLimitError(err);
+    if (rateLimitError) {
+      logger.warn({ userId, retryAfter: rateLimitError.retryAfter }, "GitHub API rate limit exceeded");
+      throw rateLimitError;
+    }
+    if (err instanceof RequestError && err.status === 404) {
+      throw new AppError("GITHUB_COMMIT_NOT_FOUND", 404);
+    }
+    throw err;
+  }
+
+  return {
+    sha: response.data.sha,
+    message: response.data.commit.message,
+    author: response.data.commit.author?.name ?? response.data.author?.login ?? null,
+    date: response.data.commit.author?.date ?? new Date(0).toISOString(),
+    filesChanged: (response.data.files ?? []).map((f) => f.filename),
+  };
+}
+
 // Fetches a single commit's raw unified diff, for ai-service's
 // fetch_commit_diff. mediaType.format: "diff" makes Octokit set
 // `Accept: application/vnd.github.v3.diff`, so GitHub returns the diff text

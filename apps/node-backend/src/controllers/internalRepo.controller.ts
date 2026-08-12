@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 import { prisma } from "../lib/prisma";
 import { AppError } from "../middleware/errorHandler";
-import { fetchCommitDiff, fetchRecentCommits } from "../services/github.service";
+import { fetchCommitDiff, fetchCommitMetadata, fetchRecentCommits } from "../services/github.service";
 
 const DEFAULT_COMMITS_LIMIT = 10;
 
@@ -36,6 +36,17 @@ export async function getRepoCommits(req: Request, res: Response): Promise<void>
 
   const commits = await fetchRecentCommits(repo.userId, owner, repoName, filePaths, limit);
   res.status(200).json({ commits });
+}
+
+// GET /internal/repos/:id/commits/:sha — called by ai-service's
+// app/tools/github_context.py (fetch_commit_metadata), never by end users.
+export async function getRepoCommitMetadata(req: Request, res: Response): Promise<void> {
+  const { id, sha } = req.params;
+  const repo = await findRepoOrThrow(id);
+  const [owner, repoName] = splitFullName(repo.fullName);
+
+  const commit = await fetchCommitMetadata(repo.userId, owner, repoName, sha);
+  res.status(200).json({ commit });
 }
 
 // GET /internal/repos/:id/commits/:sha/diff — called by ai-service's

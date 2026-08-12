@@ -21,6 +21,18 @@ def _node_client() -> httpx.AsyncClient:
     )
 
 
+# Node's CommitSummary is camelCase (filesChanged) — renamed at the boundary
+# so callers on this side only ever deal with snake_case.
+def _normalize_commit(commit: dict) -> dict:
+    return {
+        "sha": commit["sha"],
+        "message": commit["message"],
+        "author": commit["author"],
+        "date": commit["date"],
+        "files_changed": commit["filesChanged"],
+    }
+
+
 async def fetch_recent_commits(
     repo_id: str, file_paths: list[str], limit: int = DEFAULT_COMMIT_LIMIT
 ) -> list[dict]:
@@ -43,18 +55,20 @@ async def fetch_recent_commits(
         response.raise_for_status()
         commits = response.json()["commits"]
 
-    # Node's CommitSummary is camelCase (filesChanged) — renamed at the
-    # boundary so callers on this side only ever deal with snake_case.
-    return [
-        {
-            "sha": commit["sha"],
-            "message": commit["message"],
-            "author": commit["author"],
-            "date": commit["date"],
-            "files_changed": commit["filesChanged"],
-        }
-        for commit in commits
-    ]
+    return [_normalize_commit(commit) for commit in commits]
+
+
+async def fetch_commit_metadata(repo_id: str, sha: str) -> dict:
+    """Metadata (no diff) for a single commit, via node-backend's
+    GET /internal/repos/:id/commits/:sha — used by the PR-summary agent,
+    which needs just one specific commit rather than a filtered/sorted list.
+
+    Returns { sha, message, author, date, files_changed }.
+    """
+    async with _node_client() as client:
+        response = await client.get(f"/internal/repos/{repo_id}/commits/{sha}")
+        response.raise_for_status()
+        return _normalize_commit(response.json()["commit"])
 
 
 async def fetch_commit_diff(repo_id: str, sha: str) -> str:
