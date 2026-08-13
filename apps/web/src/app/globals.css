@@ -451,7 +451,9 @@
     width: 4px;
     height: 4px;
     border-radius: 9999px;
-    background-color: rgb(var(--text-muted-rgb));
+    /* currentColor so the dots work on any ground — muted alongside prose,
+       --on-accent inside a filled button. */
+    background-color: currentColor;
     animation: bp-pulse 1.4s var(--ease-out) infinite;
   }
 

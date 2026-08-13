@@ -306,6 +306,7 @@ function RepoChat() {
             onChange={setDraft}
             onSubmit={() => ask(draft)}
             disabled={isStreaming || askMutation.isPending}
+            isGenerating={isStreaming || askMutation.isPending}
           />
           <div className="flex items-center justify-between gap-3">
             <p className="font-mono text-xs text-foreground-muted">⌘↵ to send</p>

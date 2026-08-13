@@ -5,18 +5,22 @@ import { ArrowUp } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 
 export function Composer({
   value,
   onChange,
   onSubmit,
   disabled,
+  isGenerating = false,
   placeholder = "Ask about this codebase…",
 }: {
   value: string;
   onChange: (value: string) => void;
   onSubmit: () => void;
   disabled: boolean;
+  /** An answer is being generated — the send affordance becomes a progress one. */
+  isGenerating?: boolean;
   placeholder?: string;
 }) {
   const ref = React.useRef<HTMLTextAreaElement>(null);
@@ -67,10 +71,28 @@ export function Composer({
         type="submit"
         size="icon"
         disabled={!canSend}
-        aria-label="Send question"
+        // The label carries the state for screen readers, which never see the
+        // dots (they're decorative); aria-busy marks the pending region.
+        aria-label={isGenerating ? "Generating response" : "Send question"}
+        aria-busy={isGenerating || undefined}
         aria-keyshortcuts="Meta+Enter Control+Enter"
+        // Still non-interactive (there's no cancel), but not greyed out: the
+        // default disabled 50% opacity drops the dots to ~2.4:1 against the
+        // fill and reads as "broken" rather than "working".
+        className={cn(isGenerating && "disabled:opacity-100")}
       >
-        <ArrowUp />
+        {isGenerating ? (
+          // Not a spinner: a frozen spinner under prefers-reduced-motion reads
+          // as broken, whereas .streaming-dots degrades to a static visible
+          // state. Same language as the in-thread progress indicator.
+          <span className="streaming-dots" aria-hidden>
+            <span />
+            <span />
+            <span />
+          </span>
+        ) : (
+          <ArrowUp />
+        )}
       </Button>
     </form>
   );
