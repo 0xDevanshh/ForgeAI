@@ -4,6 +4,7 @@ import { Instrument_Sans } from "next/font/google";
 import { GeistMono } from "geist/font/mono";
 import { GeistSans } from "geist/font/sans";
 
+import { ErrorBoundary } from "@/components/error-boundary";
 import { QueryProvider } from "@/components/providers/query-provider";
 import { ThemeProvider } from "@/components/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -45,7 +46,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <AuthProvider>
             <QueryProvider>
               <TooltipProvider delayDuration={200}>
-                {children}
+                <ErrorBoundary>{children}</ErrorBoundary>
                 <Toaster position="bottom-right" />
               </TooltipProvider>
             </QueryProvider>

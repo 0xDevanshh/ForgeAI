@@ -143,6 +143,10 @@ const config: Config = {
         sidebar: "var(--sidebar-width)",
       },
 
+      maxHeight: {
+        composer: "var(--composer-max-height)",
+      },
+
       transitionTimingFunction: {
         out: "var(--ease-out)",
       },

@@ -78,7 +78,19 @@ Two accessibility notes, both deliberate:
 - **The light accent is darker than the dark one.** `#4C8DFF` on white is
   2.9:1; `#1F6FEB` clears AA at 4.9:1.
 
-All text/background pairs in both themes meet WCAG AA (≥4.5:1).
+All text/background pairs in both themes meet WCAG AA (≥4.5:1) — verified
+against the **full matrix** (every foreground × `--bg-base`/`--bg-surface`/
+`--bg-elevated`, plus text on accent and destructive fills), not just one
+background. Two tokens had to move to get there:
+
+- `--text-muted` was `#6E7681`, which reached only **3.5:1** on
+  `--bg-elevated`. AA is what caps how dim this can go, so muted and secondary
+  now sit closer together than a free hand would place them.
+- The light `--accent`, `--agent-docs`, and their code-syntax counterparts were
+  a shade too light against the `#F5F7FA` page canvas (4.28–4.47:1).
+
+Re-run the check after touching any colour token — a value that passes on the
+canvas can still fail on a card.
 
 ### Agent identity
 
@@ -318,6 +330,49 @@ surface with a 1px border.
 `enableSystem={false}`. Dark is the product's identity, not the OS's call —
 `enableSystem` would hand a light-mode OS user a light app on first load.
 `<ThemeToggle />` flips between the two.
+
+---
+
+## Quality floor
+
+Audited, not assumed:
+
+| Check | Result |
+| --- | --- |
+| Horizontal overflow, 360→1440px | none on any screen |
+| Keyboard focus rings | every stop shows 2px `--accent` at 2px offset |
+| Dialog focus trap + Escape | traps and closes |
+| `prefers-reduced-motion` | all animations/transitions collapse to instant |
+| WCAG AA contrast | full matrix passes in both themes |
+| Loading / empty / error per data surface | all three exist everywhere |
+
+Focus indicators come from two mechanisms and both are intentional: the global
+`:focus-visible` outline covers plain elements, while shadcn components use
+Tailwind's `ring-*` (a box-shadow) with `outline-none`. Both render as a 2px
+accent ring with a 2px gap, so they look identical. **Test focus with real Tab
+presses** — a programmatic `.focus()` does not trigger `:focus-visible` on
+buttons and will report false failures.
+
+Crashes are caught twice: `ErrorBoundary` (client renders) and `app/error.tsx`
+(the App Router's own boundary, which covers server-side renders the class
+component can't see). Both render the same `ErrorFallback`.
+
+---
+
+## Action vocabulary
+
+One operation, one verb, everywhere — including the style guide, which is what
+people copy from.
+
+| Operation | Verb |
+| --- | --- |
+| Detach a repo | **Remove** (never "Delete") |
+| Re-run indexing | **Re-index** (never "Retry" or "Refresh") |
+| Re-attempt a failed fetch | **Try again** |
+
+"Re-index" and "Try again" are different operations, so they keep different
+verbs. What's not allowed is one operation wearing two — the failed-index link
+said "Retry" while the button beside it said "Re-index".
 
 ---
 

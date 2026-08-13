@@ -5,9 +5,24 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Check, Copy } from "lucide-react";
 
-import { SyntaxHighlighter } from "@/components/chat/code-languages";
+import dynamic from "next/dynamic";
+
 import { blueprintCodeTheme } from "@/components/chat/code-theme";
 import { cn } from "@/lib/utils";
+
+/**
+ * Prism plus its language grammars is the heaviest thing on this route, and
+ * plenty of answers are prose-only — so it loads on demand, when a fenced
+ * block first renders. The fallback keeps the code readable (correct font and
+ * spacing) during the swap, so nothing jumps.
+ */
+const SyntaxHighlighter = dynamic(
+  () => import("@/components/chat/code-languages").then((m) => m.SyntaxHighlighter),
+  {
+    ssr: false,
+    loading: () => null,
+  }
+);
 
 /**
  * Agents are prompted to cite code as `path/to/file.py (lines 12-40)`, and a

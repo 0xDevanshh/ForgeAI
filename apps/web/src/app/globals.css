@@ -28,7 +28,10 @@
     /* ---- Color: text ---------------------------------------------------- */
     --text-primary-rgb: 230 237 243; /* #E6EDF3 */
     --text-secondary-rgb: 139 148 158; /* #8B949E */
-    --text-muted-rgb: 110 118 129; /* #6E7681 */
+    /* #848A94 — lifted from #6E7681, which only reached 3.5:1 on
+       --bg-elevated. AA (4.5:1) is what caps how dim this can go, so muted
+       and secondary sit closer together than a free hand would place them. */
+    --text-muted-rgb: 132 138 148;
 
     /* ---- Color: brand accent -------------------------------------------- */
     --accent-rgb: 76 141 255; /* #4C8DFF blueprint ink */
@@ -61,7 +64,7 @@
     --code-string-rgb: 53 185 168; /* teal   */
     --code-function-rgb: 76 141 255; /* blue   */
     --code-number-rgb: 192 161 131; /* warm   */
-    --code-comment-rgb: 110 118 129; /* muted  */
+    --code-comment-rgb: 132 138 148; /* muted  */
 
     /* ---- Color: shadcn bridge ------------------------------------------
        shadcn's `--accent` means "subtle hover background", NOT a brand
@@ -145,6 +148,7 @@
     --measure: 768px; /* max width for reading areas */
     --measure-form: 420px; /* max width for a single-column form card */
     --sidebar-width: 240px;
+    --composer-max-height: 200px; /* auto-growing textarea ceiling */
 
     /* ---- Motion ---------------------------------------------------------- */
     --duration-fast: 120ms;
@@ -174,11 +178,13 @@
 
     --text-primary-rgb: 13 17 23; /* #0D1117 */
     --text-secondary-rgb: 74 85 97; /* #4A5561 */
-    --text-muted-rgb: 110 118 129; /* #6E7681 */
+    /* #6A717C — darkened from #6E7681, which fell to 4.28:1 against the
+       #F5F7FA page canvas. */
+    --text-muted-rgb: 106 113 124;
 
     /* Darkened so the accent clears AA on white: #4C8DFF would sit at
        2.9:1 against #FFFFFF. */
-    --accent-rgb: 31 111 235; /* #1F6FEB */
+    --accent-rgb: 30 107 226; /* #1E6BE2 */
     --accent-hover-rgb: 26 95 208; /* #1A5FD0 */
     --on-accent-rgb: 255 255 255;
 
@@ -186,18 +192,18 @@
     --warning-rgb: 154 103 0; /* #9A6700 */
     --danger-rgb: 207 34 46; /* #CF222E */
 
-    --agent-architecture-rgb: 31 111 235; /* #1F6FEB */
+    --agent-architecture-rgb: 30 107 226; /* #1E6BE2 */
     --agent-bug-rgb: 130 80 223; /* #8250DF purple */
     --agent-pr-rgb: 20 127 115; /* #147F73 teal   */
-    --agent-docs-rgb: 138 109 79; /* #8A6D4F warm   */
+    --agent-docs-rgb: 135 107 77; /* #876B4D warm   */
 
     --hover-surface-rgb: 240 243 247;
 
     --code-keyword-rgb: 130 80 223;
     --code-string-rgb: 20 127 115;
-    --code-function-rgb: 31 111 235;
-    --code-number-rgb: 138 109 79;
-    --code-comment-rgb: 110 118 129;
+    --code-function-rgb: 30 107 226;
+    --code-number-rgb: 135 107 77;
+    --code-comment-rgb: 106 113 124;
 
     --shadow-sm: 0 1px 2px rgb(15 23 42 / 0.06);
     --shadow-md: 0 4px 12px rgb(15 23 42 / 0.08);

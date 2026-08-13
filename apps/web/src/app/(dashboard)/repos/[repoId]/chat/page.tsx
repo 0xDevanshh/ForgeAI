@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -49,7 +50,11 @@ function RepoChat() {
 
   // The repo list is already cached by /repos; reusing it avoids a dedicated
   // single-repo endpoint that doesn't exist.
-  const { data: repos } = useQuery({ queryKey: reposQueryKey, queryFn: fetchRepos });
+  const {
+    data: repos,
+    isPending: reposPending,
+    isError: reposError,
+  } = useQuery({ queryKey: reposQueryKey, queryFn: fetchRepos });
   const repo = repos?.find((r) => r.id === repoId);
 
   const { data: sessions } = useQuery({
@@ -65,7 +70,12 @@ function RepoChat() {
     setSessionId(requested?.id ?? sessions[0].id);
   }, [sessions, sessionId, requestedSessionId]);
 
-  const { data: messages, isPending: messagesPending } = useQuery({
+  const {
+    data: messages,
+    isPending: messagesPending,
+    isError: messagesError,
+    error: messagesErrorValue,
+  } = useQuery({
     queryKey: messagesQueryKey(sessionId ?? ""),
     queryFn: () => fetchMessages(sessionId!),
     enabled: sessionId !== null,
@@ -180,6 +190,28 @@ function RepoChat() {
 
   const hasMessages = (messages?.length ?? 0) > 0;
 
+  // A bad repoId in the URL (or a repo removed in another tab) would otherwise
+  // leave the top bar showing "…" and PENDING indefinitely.
+  if (!reposPending && (reposError || !repo)) {
+    return (
+      <div className="mx-auto flex max-w-measure flex-col items-center gap-4 py-16 text-center">
+        <div className="space-y-1">
+          <p className="font-medium text-foreground">
+            {reposError ? "We couldn't load this repository." : "That repository isn't here."}
+          </p>
+          <p className="text-sm text-foreground-secondary">
+            {reposError
+              ? "Check your connection and try again."
+              : "It may have been removed, or the link may be wrong."}
+          </p>
+        </div>
+        <Button asChild variant="outline">
+          <Link href="/repos">Back to repositories</Link>
+        </Button>
+      </div>
+    );
+  }
+
   return (
     // Fixed viewport height so the thread scrolls under a pinned composer
     // rather than the whole page scrolling.
@@ -199,7 +231,24 @@ function RepoChat() {
 
       <div ref={threadRef} className="flex-1 overflow-y-auto px-4 py-6">
         <div className="mx-auto max-w-measure space-y-6">
-          {sessionId && messagesPending ? (
+          {sessionId && messagesError ? (
+            <div className="space-y-3 rounded-md border border-subtle bg-surface p-6 text-center">
+              <p className="font-medium text-foreground">
+                We couldn&rsquo;t load this conversation.
+              </p>
+              <p className="text-sm text-foreground-secondary">
+                {normalizeApiError(messagesErrorValue).message}
+              </p>
+              <Button
+                variant="outline"
+                onClick={() =>
+                  queryClient.invalidateQueries({ queryKey: messagesQueryKey(sessionId) })
+                }
+              >
+                Try again
+              </Button>
+            </div>
+          ) : sessionId && messagesPending ? (
             <div className="space-y-4">
               <Skeleton className="ml-auto h-10 w-2/3" />
               <Skeleton className="h-28 w-full" />

@@ -64,9 +64,9 @@ export function RepoStatus({
           <button
             type="button"
             onClick={onRetry}
-            className="text-brand underline-offset-4 hover:underline"
+            className="rounded-sm text-brand underline-offset-4 hover:underline"
           >
-            Retry
+            Re-index
           </button>
         </p>
         {repo.errorMessage ? (

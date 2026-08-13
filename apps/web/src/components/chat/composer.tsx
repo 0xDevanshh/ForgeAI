@@ -6,8 +6,6 @@ import { ArrowUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 
-const MAX_ROWS_PX = 200;
-
 export function Composer({
   value,
   onChange,
@@ -29,7 +27,10 @@ export function Composer({
     const el = ref.current;
     if (!el) return;
     el.style.height = "auto";
-    el.style.height = `${Math.min(el.scrollHeight, MAX_ROWS_PX)}px`;
+    // The ceiling comes from the max-h-composer token on the element itself,
+    // so the clamp and the CSS can't drift apart.
+    const ceiling = Number.parseFloat(getComputedStyle(el).maxHeight);
+    el.style.height = `${Math.min(el.scrollHeight, ceiling || el.scrollHeight)}px`;
   }, [value]);
 
   const canSend = value.trim().length > 0 && !disabled;
@@ -60,7 +61,7 @@ export function Composer({
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={handleKeyDown}
         aria-label="Ask about this codebase"
-        className="max-h-[200px] border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
+        className="max-h-composer border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
       />
       <Button
         type="submit"

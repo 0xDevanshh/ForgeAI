@@ -184,7 +184,7 @@ export default function DesignSystemPage() {
             <Button variant="secondary">Secondary</Button>
             <Button variant="outline">Outline</Button>
             <Button variant="ghost">Ghost</Button>
-            <Button variant="destructive">Delete</Button>
+            <Button variant="destructive">Remove</Button>
             <Button variant="link">Link</Button>
           </div>
           <div className="flex flex-wrap items-center gap-3">
@@ -212,7 +212,7 @@ export default function DesignSystemPage() {
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Delete repository</DialogTitle>
+                  <DialogTitle>Remove repository?</DialogTitle>
                   <DialogDescription>
                     This removes the index and every chat session attached to
                     it. This can&rsquo;t be undone.
@@ -220,7 +220,7 @@ export default function DesignSystemPage() {
                 </DialogHeader>
                 <DialogFooter>
                   <Button variant="outline">Cancel</Button>
-                  <Button variant="destructive">Delete</Button>
+                  <Button variant="destructive">Remove</Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
