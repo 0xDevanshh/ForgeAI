@@ -87,10 +87,30 @@ never reads as "something succeeded."
 
 | Agent | Token | Dark | Light |
 | --- | --- | --- | --- |
-| `architecture` | `--agent-architecture-rgb` | `#4C8DFF` | `#1F6FEB` |
-| `bug_investigation` | `--agent-bug-rgb` | `#F85149` | `#CF222E` |
-| `pr_summary` | `--agent-pr-rgb` | `#A371F7` | `#8250DF` |
-| `documentation` | `--agent-docs-rgb` | `#39C5CF` | `#1B7C83` |
+| `architecture` | `--agent-architecture-rgb` | `#4C8DFF` blue | `#1F6FEB` |
+| `bug_investigation` | `--agent-bug-rgb` | `#A371F7` purple | `#8250DF` |
+| `pr_summary` | `--agent-pr-rgb` | `#35B9A8` teal | `#147F73` |
+| `documentation` | `--agent-docs-rgb` | `#C0A183` warm | `#8A6D4F` |
+
+**bug_investigation is purple, not red.** Red is `--danger`; a bug *report* is
+not a failure state, and reusing the status hue would make every investigation
+answer look like an error. All four clear AA on `--bg-base`.
+
+### Code syntax
+
+| Token | Role |
+| --- | --- |
+| `--code-keyword-rgb` | keywords, tags, at-rules |
+| `--code-string-rgb` | strings, regex, attr values |
+| `--code-function-rgb` | functions, class names, properties |
+| `--code-number-rgb` | numbers, booleans, constants |
+| `--code-comment-rgb` | comments |
+
+Deliberately low-saturation, and reusing the agent hues rather than adding a
+second palette — a code block sits inside prose here, so a loud theme would
+fight the reading column. `components/chat/code-theme.ts` builds the
+react-syntax-highlighter theme from these, so code follows the light/dark
+switch like everything else.
 
 ---
 

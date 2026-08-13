@@ -43,13 +43,25 @@
     --danger-rgb: 248 81 73; /* #F85149 index failed */
 
     /* ---- Color: agent identity ------------------------------------------
-       A ramp kept deliberately separate from status colors, so "this answer
-       came from the docs agent" never reads as "something succeeded".
-       Architecture reuses the accent; the other three get their own hue. */
-    --agent-architecture-rgb: 76 141 255; /* accent blue */
-    --agent-bug-rgb: 248 81 73; /* red */
-    --agent-pr-rgb: 163 113 247; /* #A371F7 violet */
-    --agent-docs-rgb: 57 197 207; /* #39C5CF cyan */
+       Muted and harmonious, not a rainbow. Kept clear of the status ramp so
+       "this came from the docs agent" never reads as "something succeeded" —
+       which is also why bug_investigation is purple rather than red: red is
+       --danger, and a bug *report* is not a failure state.
+       All four clear AA on --bg-base. */
+    --agent-architecture-rgb: 76 141 255; /* #4C8DFF accent blue  */
+    --agent-bug-rgb: 163 113 247; /* #A371F7 technical purple */
+    --agent-pr-rgb: 53 185 168; /* #35B9A8 teal            */
+    --agent-docs-rgb: 192 161 131; /* #C0A183 warm neutral    */
+
+    /* ---- Color: code syntax ---------------------------------------------
+       Deliberately low-saturation: a code block sits inside prose here, so a
+       loud theme would fight the reading column. Reuses agent/status hues so
+       the palette stays coherent rather than introducing a second one. */
+    --code-keyword-rgb: 163 113 247; /* purple */
+    --code-string-rgb: 53 185 168; /* teal   */
+    --code-function-rgb: 76 141 255; /* blue   */
+    --code-number-rgb: 192 161 131; /* warm   */
+    --code-comment-rgb: 110 118 129; /* muted  */
 
     /* ---- Color: shadcn bridge ------------------------------------------
        shadcn's `--accent` means "subtle hover background", NOT a brand
@@ -174,12 +186,18 @@
     --warning-rgb: 154 103 0; /* #9A6700 */
     --danger-rgb: 207 34 46; /* #CF222E */
 
-    --agent-architecture-rgb: 31 111 235;
-    --agent-bug-rgb: 207 34 46;
-    --agent-pr-rgb: 130 80 223; /* #8250DF */
-    --agent-docs-rgb: 27 124 131; /* #1B7C83 */
+    --agent-architecture-rgb: 31 111 235; /* #1F6FEB */
+    --agent-bug-rgb: 130 80 223; /* #8250DF purple */
+    --agent-pr-rgb: 20 127 115; /* #147F73 teal   */
+    --agent-docs-rgb: 138 109 79; /* #8A6D4F warm   */
 
     --hover-surface-rgb: 240 243 247;
+
+    --code-keyword-rgb: 130 80 223;
+    --code-string-rgb: 20 127 115;
+    --code-function-rgb: 31 111 235;
+    --code-number-rgb: 138 109 79;
+    --code-comment-rgb: 110 118 129;
 
     --shadow-sm: 0 1px 2px rgb(15 23 42 / 0.06);
     --shadow-md: 0 4px 12px rgb(15 23 42 / 0.08);
@@ -405,6 +423,13 @@
 
   .progress-fill--active {
     animation: bp-breathe 2s var(--ease-out) infinite;
+  }
+
+  /* ---- Pipeline stepper -------------------------------------------------
+     The live multi-agent trace. The active marker breathes rather than
+     spins — this is a pipeline reporting itself, not a blocking wait. */
+  .step-marker--active {
+    animation: bp-breathe 1.8s var(--ease-out) infinite;
   }
 
   /* ---- Streaming indicator ---------------------------------------------

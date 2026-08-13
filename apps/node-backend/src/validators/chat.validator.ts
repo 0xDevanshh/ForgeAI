@@ -8,3 +8,9 @@ export const chatQuerySchema = z.object({
 });
 
 export type ChatQueryInput = z.infer<typeof chatQuerySchema>;
+
+export const createChatSessionSchema = z.object({
+  repoId: z.string().min(1, "repoId is required"),
+});
+
+export type CreateChatSessionInput = z.infer<typeof createChatSessionSchema>;

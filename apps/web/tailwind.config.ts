@@ -50,6 +50,14 @@ const config: Config = {
           docs: token("--agent-docs-rgb"),
         },
 
+        code: {
+          keyword: token("--code-keyword-rgb"),
+          string: token("--code-string-rgb"),
+          function: token("--code-function-rgb"),
+          number: token("--code-number-rgb"),
+          comment: token("--code-comment-rgb"),
+        },
+
         /* ---- shadcn bridge ---------------------------------------------
            shadcn components ship hardcoded class names (bg-background,
            bg-accent, text-muted-foreground...). Aliasing them onto the

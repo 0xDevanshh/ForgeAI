@@ -4,6 +4,7 @@ import { setupServer } from "msw/node";
 import request from "supertest";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { app } from "../src/app";
+import { env } from "../src/config/env";
 import { decrypt, encrypt } from "../src/lib/encryption";
 import { prisma } from "../src/lib/prisma";
 import { redisClient } from "../src/services/redisClient";
@@ -86,9 +87,17 @@ afterAll(async () => {
 });
 
 describe("GitHub OAuth connect flow", () => {
-  it("rejects /auth/github/connect without a logged-in session", async () => {
+  it("sends an unauthenticated /auth/github/connect to sign-in, not to GitHub", async () => {
     const res = await request(app).get("/auth/github/connect");
-    expect(res.status).toBe(401);
+
+    // The browser reaches this by top-level navigation, so authenticateNavigation
+    // answers with a redirect rather than a JSON 401 that would render as raw
+    // text in the address bar.
+    expect(res.status).toBe(302);
+    // Asserting the destination, not just the status: a bare 302 check would
+    // still pass if an anonymous visitor were handed GitHub's consent screen.
+    expect(res.headers.location).toBe(`${env.FRONTEND_URL}/login`);
+    expect(res.headers.location).not.toContain("github.com");
   });
 
   it("redirects to github.com with a valid state param stored in Redis", async () => {
