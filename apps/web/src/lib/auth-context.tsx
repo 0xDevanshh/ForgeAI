@@ -8,6 +8,7 @@ import {
   setAccessTokenChangeHandler,
   setSessionExpiredHandler,
 } from "@/lib/api-client";
+import { disconnectSocket } from "@/lib/socket-client";
 
 export interface AuthUser {
   id: string;
@@ -24,6 +25,9 @@ interface AuthContextValue {
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  /** Re-reads /auth/me — for when a side effect (e.g. linking GitHub) changes
+   *  the user server-side and the cached copy would otherwise go stale. */
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = React.createContext<AuthContextValue | null>(null);
@@ -116,6 +120,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [authenticate]
   );
 
+  const refreshUser = React.useCallback(async () => {
+    const me = await apiClient.get<{ user: AuthUser }>("/auth/me");
+    setUser(me.data.user);
+  }, []);
+
   const logout = React.useCallback(async () => {
     try {
       // Requires the Bearer token, so it has to run before the token is cleared.
@@ -126,12 +135,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setAccessToken(null);
       setUser(null);
+      // The socket authenticated with the now-dead token and is joined to this
+      // user's room — it must not outlive the session.
+      disconnectSocket();
     }
   }, []);
 
   const value = React.useMemo<AuthContextValue>(
-    () => ({ user, accessToken: token, isLoading, login, signup, logout }),
-    [user, token, isLoading, login, signup, logout]
+    () => ({ user, accessToken: token, isLoading, login, signup, logout, refreshUser }),
+    [user, token, isLoading, login, signup, logout, refreshUser]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

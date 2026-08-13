@@ -115,11 +115,28 @@ export async function listMyRepos(req: Request, res: Response): Promise<void> {
       indexStatus: true,
       lastIndexedAt: true,
       createdAt: true,
+      // Language breakdown ({ [language]: fileCount }) and live job progress
+      // are both needed to render a repo card without the client having to
+      // fan out an extra request per repo.
+      languages: true,
+      indexJobs: {
+        orderBy: { createdAt: "desc" },
+        take: 1,
+        select: { progress: true, errorMessage: true },
+      },
     },
     orderBy: { createdAt: "desc" },
   });
 
-  res.status(200).json({ repos });
+  // Flattened so the client sees a plain `progress`/`errorMessage` rather than
+  // having to reach into a one-element array.
+  const payload = repos.map(({ indexJobs, ...repo }) => ({
+    ...repo,
+    progress: indexJobs[0]?.progress ?? 0,
+    errorMessage: indexJobs[0]?.errorMessage ?? null,
+  }));
+
+  res.status(200).json({ repos: payload });
 }
 
 // DELETE /repos/:id — requires authenticate.

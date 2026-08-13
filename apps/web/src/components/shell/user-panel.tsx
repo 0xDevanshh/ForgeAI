@@ -2,7 +2,8 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { LogOut } from "lucide-react";
+import Link from "next/link";
+import { LogOut, Settings } from "lucide-react";
 
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -18,7 +19,7 @@ function initialsFor(email: string): string {
   return (letters.slice(0, 2) || "?").toUpperCase();
 }
 
-export function UserPanel() {
+export function UserPanel({ onNavigate }: { onNavigate?: () => void }) {
   const router = useRouter();
   const { user, logout } = useAuth();
   const [isSigningOut, setIsSigningOut] = React.useState(false);
@@ -45,6 +46,16 @@ export function UserPanel() {
 
       <div className="flex items-center gap-1">
         <ThemeToggle />
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button asChild variant="ghost" size="icon" aria-label="Settings">
+              <Link href="/settings" onClick={onNavigate}>
+                <Settings />
+              </Link>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Settings</TooltipContent>
+        </Tooltip>
         <Tooltip>
           <TooltipTrigger asChild>
             <Button

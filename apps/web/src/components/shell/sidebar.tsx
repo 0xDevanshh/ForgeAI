@@ -22,7 +22,7 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         <SidebarNav onNavigate={onNavigate} />
       </div>
 
-      <UserPanel />
+      <UserPanel onNavigate={onNavigate} />
     </div>
   );
 }

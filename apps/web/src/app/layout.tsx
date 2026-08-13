@@ -4,6 +4,7 @@ import { Instrument_Sans } from "next/font/google";
 import { GeistMono } from "geist/font/mono";
 import { GeistSans } from "geist/font/sans";
 
+import { QueryProvider } from "@/components/providers/query-provider";
 import { ThemeProvider } from "@/components/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
@@ -42,10 +43,12 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           disableTransitionOnChange
         >
           <AuthProvider>
-            <TooltipProvider delayDuration={200}>
-              {children}
-              <Toaster position="bottom-right" />
-            </TooltipProvider>
+            <QueryProvider>
+              <TooltipProvider delayDuration={200}>
+                {children}
+                <Toaster position="bottom-right" />
+              </TooltipProvider>
+            </QueryProvider>
           </AuthProvider>
         </ThemeProvider>
       </body>

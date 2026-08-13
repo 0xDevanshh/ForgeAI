@@ -216,6 +216,23 @@ The same gutter-marker idea drives the sidebar's active nav item: a 2px
 `--accent` left border, like an editor's active-line marker. Inactive items
 reserve the same 2px as a transparent border so labels never shift.
 
+The shape lives in `.gutter-tag`; variants supply only colour:
+
+| Class | Use |
+| --- | --- |
+| `.agent-tag` + `.agent-tag--<agent>` | Which agent produced an answer |
+| `.language-tag` | Detected languages on a repo card |
+
+Language tags stay **neutral** on purpose — colouring them would dilute the
+accent and agent hues, which are the palette's carriers of meaning.
+
+### Indexing progress
+
+`.progress-track` / `.progress-fill` render the slim determinate bar on repo
+cards. `.progress-fill--active` adds a slow breathe while work is in flight, so
+a stalled-looking percentage still reads as live; the *width* always stays
+truthful to the reported progress. Static under reduced motion.
+
 ### Auth blueprint motif
 
 `<BlueprintMotif />` draws an architecture diagram stroke-by-stroke, then sweeps

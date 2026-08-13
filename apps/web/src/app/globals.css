@@ -321,23 +321,38 @@
     background-size: var(--space-4) var(--space-4);
   }
 
-  /* ---- Signature: agent tags ------------------------------------------
+  /* ---- Signature: gutter tags ------------------------------------------
      Code-editor gutter markers, not emoji pills. Monospace carries real
-     meaning in a tool that reads code. */
-  .agent-tag {
+     meaning in a tool that reads code. The shape is shared; each variant
+     supplies only its own colour. */
+  .gutter-tag,
+  .agent-tag,
+  .language-tag {
     display: inline-flex;
     align-items: center;
     gap: var(--space-2);
     padding: var(--space-1) var(--space-2);
-    border-left: 2px solid rgb(var(--agent-rgb));
+    border-left: 2px solid;
     border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
-    background: rgb(var(--agent-rgb) / 0.1);
-    color: rgb(var(--agent-rgb));
     font-family: var(--font-mono);
     font-size: var(--text-xs);
     line-height: 1.4;
     letter-spacing: var(--tracking-wide);
     white-space: nowrap;
+  }
+
+  .agent-tag {
+    border-left-color: rgb(var(--agent-rgb));
+    background: rgb(var(--agent-rgb) / 0.1);
+    color: rgb(var(--agent-rgb));
+  }
+
+  /* Languages stay neutral on purpose — colouring them would dilute the
+     accent/agent hues, which are the palette's carriers of meaning. */
+  .language-tag {
+    border-left-color: rgb(var(--border-strong-rgb));
+    background: rgb(var(--bg-elevated-rgb));
+    color: rgb(var(--text-secondary-rgb));
   }
 
   .agent-tag--architecture {
@@ -367,6 +382,29 @@
 
   .motif-scan {
     animation: bp-scan var(--duration-scan) linear infinite;
+  }
+
+  /* ---- Indexing progress bar -------------------------------------------
+     A slim determinate track. The fill breathes while work is in flight so
+     an idle-looking percentage still reads as live; the width itself stays
+     truthful to the reported progress. Static under reduced motion. */
+  .progress-track {
+    height: 3px;
+    width: 100%;
+    overflow: hidden;
+    border-radius: 9999px;
+    background-color: rgb(var(--border-strong-rgb));
+  }
+
+  .progress-fill {
+    height: 100%;
+    border-radius: 9999px;
+    background-color: rgb(var(--accent-rgb));
+    transition: width var(--duration-slow) var(--ease-out);
+  }
+
+  .progress-fill--active {
+    animation: bp-breathe 2s var(--ease-out) infinite;
   }
 
   /* ---- Streaming indicator ---------------------------------------------
@@ -445,6 +483,16 @@
   100% {
     opacity: 0;
     transform: translateY(108%);
+  }
+}
+
+@keyframes bp-breathe {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.62;
   }
 }
 

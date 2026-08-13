@@ -120,6 +120,30 @@ export async function rotateRefreshToken(rawToken: string): Promise<RotationResu
   };
 }
 
+// Verifies a refresh token and resolves its owner WITHOUT consuming it.
+//
+// Deliberately does not rotate: this is for endpoints a browser reaches by
+// top-level navigation (which can't carry a Bearer header), where the token is
+// only being read to identify the user, not redeemed for a new pair.
+//
+// It also deliberately skips rotateRefreshToken's revoke-the-whole-family
+// response to a revoked token. That heuristic detects a *replayed* token —
+// meaningful only because rotation makes each token single-use. Nothing is
+// consumed here, so a revoked token means a stale cookie far more often than
+// an attack, and nuking every active session over one is the worse failure.
+export async function getUserFromRefreshToken(rawToken: string): Promise<User> {
+  const existing = await prisma.refreshToken.findFirst({
+    where: { tokenHash: hashToken(rawToken) },
+    include: { user: true },
+  });
+
+  if (!existing || existing.revokedAt || existing.expiresAt.getTime() <= Date.now()) {
+    throw new AppError(INVALID_REFRESH_MESSAGE, 401);
+  }
+
+  return existing.user;
+}
+
 export async function revokeRefreshToken(rawToken: string): Promise<void> {
   await prisma.refreshToken.updateMany({
     where: { tokenHash: hashToken(rawToken), revokedAt: null },
