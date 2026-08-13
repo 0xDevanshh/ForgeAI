@@ -69,36 +69,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (bootstrapped.current) return;
     bootstrapped.current = true;
 
-    let cancelled = false;
-
     async function restoreSession() {
       try {
         // /auth/refresh returns only { accessToken } — the user has to be
         // fetched separately once the token is in place.
         const refreshed = await apiClient.post<{ accessToken: string }>("/auth/refresh");
-        if (cancelled) return;
         setAccessToken(refreshed.data.accessToken);
 
         const me = await apiClient.get<{ user: AuthUser }>("/auth/me");
-        if (cancelled) return;
         setUser(me.data.user);
       } catch {
         // No cookie, or it was revoked/expired. Not an error worth surfacing:
         // this is the normal path for anyone who isn't signed in.
-        if (!cancelled) {
-          setAccessToken(null);
-          setUser(null);
-        }
+        setAccessToken(null);
+        setUser(null);
       } finally {
-        if (!cancelled) setIsLoading(false);
+        setIsLoading(false);
       }
     }
 
     void restoreSession();
 
-    return () => {
-      cancelled = true;
-    };
+    // Deliberately no cleanup/cancelled flag. StrictMode runs mount → cleanup →
+    // mount, so a `cancelled` guard would discard the only bootstrap's result
+    // (including setIsLoading(false)) while the ref above blocks the retry —
+    // leaving isLoading stuck true and the whole app on a "Loading" screen in
+    // dev. The ref already guarantees exactly one run, and this provider lives
+    // for the app's lifetime, so there is no real unmount to race with.
   }, []);
 
   const authenticate = React.useCallback(

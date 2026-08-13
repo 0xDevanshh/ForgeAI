@@ -2,7 +2,11 @@ import re
 
 from app.graph.state import GraphState
 from app.lib.llm import get_llm
-from app.tools.github_context import fetch_commit_diff, fetch_commit_metadata
+from app.tools.github_context import (
+    fetch_commit_diff,
+    fetch_commit_metadata,
+    fetch_recent_commits,
+)
 from app.tools.rag_search import RetrievedChunk, search_codebase
 
 SYSTEM_PROMPT = """Summarize what changed, why (infer from the commit message and diff), and \
@@ -12,6 +16,19 @@ which modules/files were affected. Be concise."""
 # a-f letter (checked below) rules out plain numbers — an issue or line
 # number, say — from being mistaken for a commit reference.
 _SHA_PATTERN = re.compile(r"\b[0-9a-fA-F]{7,40}\b")
+
+# "the latest commit", "most recent commit", "last commit" — by far the most
+# natural way to ask, and resolvable without troubling the user for a SHA.
+_LATEST_PATTERN = re.compile(
+    r"\b(latest|last|most[\s-]?recent|newest|head)\b.{0,20}\bcommit\b"
+    r"|\bcommit\b.{0,20}\b(latest|last|most[\s-]?recent|newest|head)\b",
+    re.IGNORECASE,
+)
+
+
+def refers_to_latest_commit(query: str) -> bool:
+    """True when the query names the newest commit rather than a specific one."""
+    return _LATEST_PATTERN.search(query) is not None
 
 
 async def parse_commit_reference(query: str) -> str | None:
@@ -55,10 +72,18 @@ async def pr_summary_node(state: GraphState) -> GraphState:
         state["regeneration_count"] += 1
 
     sha = await parse_commit_reference(state["query"])
+
+    if sha is None and refers_to_latest_commit(state["query"]):
+        # Resolve it rather than bouncing the question back: the newest commit
+        # is exactly what fetch_recent_commits returns first.
+        recent = await fetch_recent_commits(state["repo_id"], [], limit=1)
+        if recent:
+            sha = recent[0]["sha"]
+
     if sha is None:
         state["generated_response"] = (
-            "I couldn't find a commit reference in your question. Could you share the commit "
-            "SHA you'd like summarized?"
+            "I couldn't tell which commit you mean. Share the commit SHA, or ask about "
+            "the latest commit and I'll pick it up from there."
         )
         # No commit to ground a claim in yet, so there's nothing for the
         # Reviewer to check — builder.py routes this case straight to END.

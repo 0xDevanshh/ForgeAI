@@ -99,8 +99,13 @@ services:
     restart: unless-stopped
     env_file:
       - .env
+    environment:
+      # Next reads PORT; WEB_PORT is this repo's name for the same thing.
+      PORT: ${WEB_PORT:-3000}
     ports:
-      - "${WEB_PORT:-3000}:3000"
+      # Both sides use WEB_PORT: Next listens on PORT (set above), so a fixed
+      # :3000 on the container side would point at nothing when WEB_PORT differs.
+      - "${WEB_PORT:-3000}:${WEB_PORT:-3000}"
     depends_on:
       - node-backend
     networks:

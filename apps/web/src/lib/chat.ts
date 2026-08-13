@@ -61,13 +61,25 @@ export interface ChatQueryResult {
   message: ChatMessage;
 }
 
+/**
+ * The full planner → agent → reviewer graph can run for minutes: a rejected
+ * answer is regenerated up to three times, and each attempt re-retrieves and
+ * calls the model twice. The client's default 30s timeout aborted well before
+ * that, so the answer would render from the socket stream and then be replaced
+ * by a timeout error seconds later. Matches node-backend's own 5-minute
+ * ceiling for this route.
+ */
+const QUERY_TIMEOUT_MS = 5 * 60 * 1000;
+
 export async function sendQuery(input: {
   query: string;
   repoId: string;
   chatSessionId: string;
   chatHistory: { role: string; content: string }[];
 }): Promise<ChatQueryResult> {
-  const { data } = await apiClient.post<ChatQueryResult>("/chat/query", input);
+  const { data } = await apiClient.post<ChatQueryResult>("/chat/query", input, {
+    timeout: QUERY_TIMEOUT_MS,
+  });
   return data;
 }
 

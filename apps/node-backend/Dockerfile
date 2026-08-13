@@ -14,7 +14,16 @@ RUN pnpm install --frozen-lockfile=false
 COPY packages/shared-types packages/shared-types
 COPY apps/node-backend apps/node-backend
 RUN pnpm --filter @ai-codebase-copilot/shared-types build
-RUN pnpm --filter node-backend build
+
+# `build` runs `prisma generate` first, and prisma.config.ts resolves
+# DATABASE_URL through env() — which throws when unset. There is no .env in the
+# image (and there shouldn't be), so a throwaway value is supplied for this one
+# layer. Generate only reads the schema and never opens a connection, so the
+# value is irrelevant; the real URL arrives at runtime via compose's env_file.
+# Scoped to this RUN rather than set with ENV, so it cannot leak into the
+# running container and mask a genuinely missing DATABASE_URL.
+RUN DATABASE_URL="postgresql://placeholder:placeholder@localhost:5432/placeholder" \
+    pnpm --filter node-backend build
 
 WORKDIR /app/apps/node-backend
 EXPOSE 4000

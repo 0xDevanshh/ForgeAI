@@ -21,9 +21,13 @@ services:
   web:
     environment:
       NODE_ENV: development
-      NODE_OPTIONS: --inspect=0.0.0.0:9230
+      # No NODE_OPTIONS=--inspect here, deliberately. `next dev` spawns a
+      # worker process which inherits NODE_OPTIONS, then derives the child's
+      # inspector port from it — with an explicit host:port that arithmetic
+      # produces an out-of-range value and node exits:
+      #   /usr/local/bin/node: must be 0 or in range 1024 to 65535.
+      # which crash-loops the container. To debug the Next server, attach with
+      # a bare `NODE_OPTIONS=--inspect` (no host:port) for that session only.
     volumes:
       - ./apps/web/src:/app/apps/web/src
       - ./apps/web/public:/app/apps/web/public
-    ports:
-      - "9230:9230" # Node.js inspector
