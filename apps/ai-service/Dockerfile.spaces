@@ -1,0 +1,33 @@
+# syntax=docker/dockerfile:1
+
+FROM python:3.11-slim
+
+WORKDIR /app
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    HF_HOME=/tmp/hf-cache
+
+# git is required by repo_cloner.py
+RUN apt-get update && apt-get install -y --no-install-recommends git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install CPU-only PyTorch first so pip doesn't pull CUDA packages.
+RUN pip install --no-cache-dir --timeout 120 --retries 5 \
+    --index-url https://download.pytorch.org/whl/cpu \
+    torch==2.10.0
+
+COPY apps/ai-service/requirements.txt ./
+
+RUN pip install --no-cache-dir --timeout 120 --retries 5 \
+    -r requirements.txt
+
+COPY apps/ai-service/app ./app
+
+# Bake the embedding model into the image so Spaces doesn't download
+# it on every cold start.
+RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')"
+
+EXPOSE 7860
+
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "7860"]
