@@ -1,0 +1,31 @@
+# syntax=docker/dockerfile:1
+
+FROM python:3.11-slim
+
+WORKDIR /app
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    HF_HOME=/tmp/hf-cache
+
+RUN apt-get update && apt-get install -y --no-install-recommends git \
+    && rm -rf /var/lib/apt/lists/*
+
+# CPU-only PyTorch
+RUN pip install --no-cache-dir --timeout 120 --retries 5 \
+    --index-url https://download.pytorch.org/whl/cpu \
+    torch==2.10.0
+
+COPY apps/ai-service/requirements.txt ./requirements.txt
+
+RUN pip install --no-cache-dir --timeout 120 --retries 5 \
+    -r requirements.txt
+
+COPY apps/ai-service/app ./app
+
+# Bake embedding model into image
+RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')"
+
+EXPOSE 10000
+
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-10000}"]
