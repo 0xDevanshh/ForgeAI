@@ -40,6 +40,21 @@ RUN pnpm install --prod --frozen-lockfile=false
 COPY --from=builder /app/packages/shared-types/dist packages/shared-types/dist
 COPY --from=builder /app/apps/node-backend/dist apps/node-backend/dist
 
+# The generated Prisma client lives in node_modules/.prisma/client, which the
+# builder's `prisma generate` populated in *its* node_modules — not this
+# stage's, which comes from the fresh --prod install above. So the schema and
+# config are copied in and generate is re-run here against this node_modules.
+# Without this, startup dies on `Cannot find module '.prisma/client/default'`.
+COPY --from=builder /app/apps/node-backend/prisma apps/node-backend/prisma
+COPY --from=builder /app/apps/node-backend/prisma.config.ts apps/node-backend/prisma.config.ts
+
 WORKDIR /app/apps/node-backend
+# Same placeholder rationale as the builder stage: prisma.config.ts resolves
+# DATABASE_URL through env() and throws when unset, but generate only reads the
+# schema and never connects. Scoped to this RUN so it cannot leak into the
+# running container and mask a genuinely missing DATABASE_URL at runtime.
+RUN DATABASE_URL="postgresql://placeholder:placeholder@localhost:5432/placeholder" \
+    pnpm exec prisma generate
+
 EXPOSE 4000
 CMD ["node", "dist/index.js"]
